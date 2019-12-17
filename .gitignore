@@ -1,0 +1,26 @@
+# Untracked directories
+.idea/
+deploy/
+build/
+tmp/
+doc/build/
+.idea/*
+.idea/*.*
+deploy/*
+temp/
+doc/build/*
+tests/outputs
+tests/outputs/*
+test-reports.txt
+test-results/
+
+*.gpkg-shm
+*.gpkg-wal
+
+# Untrack compiled files
+*.pyc 
+*.pyd
+
+#are changed all the time, should be commited explicitely
+*.cache/
+*.cache/*
