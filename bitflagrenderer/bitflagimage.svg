@@ -13,8 +13,8 @@
    height="128"
    width="128"
    inkscape:version="0.92.2 (5c3e80d, 2017-08-06)"
-   sodipodi:docname="raster_flagimage.svg"
-   inkscape:export-filename="C:\Users\geo_beja\Desktop\flag_renderer.png"
+   sodipodi:docname="bitflagimage.svg"
+   inkscape:export-filename="C:\Users\geo_beja\Repositories\QGIS_Plugins\flag-renderer\bitflagrenderer\bitflagimage.png"
    inkscape:export-xdpi="96"
    inkscape:export-ydpi="96">
   <sodipodi:namedview
@@ -170,7 +170,7 @@
         <dc:format>image/svg+xml</dc:format>
         <dc:type
            rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
-        <dc:title></dc:title>
+        <dc:title />
       </cc:Work>
     </rdf:RDF>
   </metadata>

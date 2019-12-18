@@ -1,6 +1,6 @@
 import pathlib
 VERSION = '0.1'
-__version__ = VERSION
+__version__ = '<dummy>'
 TITLE = 'Bit Flag Renderer'
 AUTHOR = 'Benjamin Jakimow'
 MAIL = 'benjamin.jakimow@geo.hu-berlin.de'

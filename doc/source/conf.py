@@ -14,15 +14,50 @@
 # import sys
 # sys.path.insert(0, os.path.abspath('.'))
 
+import os, sys, datetime
+import mock
+
+if True:
+    MOCK_MODULES = ['qgis', 'qgis.core', 'qgis.gui', 'qgis.utils', 'numpy', 'scipy', 'osgeo', 'gdal',
+                'vrtbuilder', 'vrtbuilder.virtualrasters',
+                'qgis.PyQt', 'qgis.PyQt.Qt', 'qgis.PyQt.QtCore', 'qgis.PyQt.QtGui', 'qgis.PyQt.QtWidgets', 'qgis.PyQt.QtXml',
+                'processing', 'processing.core', 'processing.core.ProcessingConfig']
+
+    for mod_name in MOCK_MODULES:
+        sys.modules[mod_name] = mock.Mock()
+sys.path.insert(0, os.path.abspath('.'))
+sys.path.insert(0, os.path.abspath('../'))
+sys.path.insert(0, os.path.abspath('../../'))
+
+try:
+    # enable readthedocs to load git-lfs files
+    # see https://github.com/rtfd/readthedocs.org/issues/1846
+    #     https://github.com/InfinniPlatform/InfinniPlatform.readthedocs.org.en/blob/master/docs/source/conf.py#L18-L31
+    # If runs on ReadTheDocs environment
+    on_rtd = os.environ.get('READTHEDOCS', None) == 'True'
+
+    if True or on_rtd:
+        print('Fetching files with git_lfs')
+        DOC_SOURCES_DIR = os.path.dirname(os.path.abspath(__file__))
+        PROJECT_ROOT_DIR = os.path.dirname(os.path.dirname(DOC_SOURCES_DIR))
+        sys.path.insert(0, DOC_SOURCES_DIR)
+        print('PROJECT_ROOT_DIR', PROJECT_ROOT_DIR)
+
+        from git_lfs import fetch
+        fetch(PROJECT_ROOT_DIR)
+except Exception as ex:
+    print(ex)
 
 # -- Project information -----------------------------------------------------
 
-project = 'Bit Flag Renderer'
-copyright = '2019, Benjamin Jakimow'
-author = 'Benjamin Jakimow'
+import bitflagrenderer
+
+project = bitflagrenderer.TITLE
+copyright = '{}, {}'.format(datetime.datetime.now().year, bitflagrenderer.AUTHOR)
+author = bitflagrenderer.AUTHOR
 
 # The full version, including alpha/beta/rc tags
-release = '0.1'
+release = bitflagrenderer.VERSION
 
 
 # -- General configuration ---------------------------------------------------
