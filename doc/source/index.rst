@@ -6,7 +6,7 @@
 Bit Flag Renderer
 =================
 
-A QGIS Plugin to visualize bit flags in raster images
+A QGIS Plugin to visualize bit flags in raster images.
 
 
 
@@ -14,7 +14,9 @@ A QGIS Plugin to visualize bit flags in raster images
    :maxdepth: 2
    :caption: Contents:
 
-   Changelog <changelog.rst>
+   usage.rst
+   about.rst
+   changelog.rst
    License <LICENSE.md>
 
 .. table::
@@ -30,6 +32,7 @@ Features
 
 * Renders single flags and combinations of neighbored flags in raster images
 * integrated to QGIS Layer Styling panel
+
 
 
 Indices and tables
