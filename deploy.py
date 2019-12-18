@@ -159,8 +159,6 @@ def updateSphinxChangelog():
 
 def updateInfoHTMLs():
 
-
-
     urlIssueTracker = URL_ISSUE_TRACKER
 
     def readTextFile(path):

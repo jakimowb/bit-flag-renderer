@@ -3,13 +3,30 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Welcome to Flag Raster Renderer's documentation!
-================================================
+Bit Flag Renderer
+=================
+
+A QGIS Plugin to visualize bit flags in raster images
+
+
 
 .. toctree::
    :maxdepth: 2
    :caption: Contents:
 
+.. table::
+
+   ==================== ================================================================================================
+   Online documentation https://readthedocs.org/projects/bit-flag-renderer/
+   Source Code          https://bitbucket.org/jakimowb/bit-flag-renderer
+   Issue tracker        https://bitbucket.org/jakimowb/bit-flag-renderer/issues
+   ==================== ================================================================================================
+
+Features
+--------
+
+* Renders single flags and combinations of neighbored flags in raster images
+* integrated to QGIS Layer Styling panel
 
 
 Indices and tables
