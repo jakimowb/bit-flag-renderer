@@ -14,6 +14,9 @@ A QGIS Plugin to visualize bit flags in raster images
    :maxdepth: 2
    :caption: Contents:
 
+
+   License <LICENSE.md>
+
 .. table::
 
    ==================== ================================================================================================
