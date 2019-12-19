@@ -11,13 +11,14 @@ def Landsat8_QA()->BitFlagScheme:
 
     p2 = BitFlagParameter('Terrain Occlusion', 1)
 
-    p3 = BitFlagParameter('Radiometric Saturation', 3, 2)
+    p3 = BitFlagParameter('Radiometric Saturation', 2, 2)
     p3[0].setName('No bands contain saturation')
     p3[1].setName('1-2 bands contain saturation')
     p3[1].setName('3-4 bands contain saturation')
     p3[1].setName('5 or more bands contain saturation')
 
     p4 = BitFlagParameter('Cloud', 4)
+    p4[1].setColor('grey')
 
     p5 = BitFlagParameter('Cloud Confidence', 5, 2)
     p5[0].setName('Not Determined')
@@ -37,7 +38,7 @@ def Landsat8_QA()->BitFlagScheme:
     p7[2].setName('Medium')
     p7[3].setName('High')
 
-    p8 = BitFlagParameter('Cirrus Confidence', 5, 2)
+    p8 = BitFlagParameter('Cirrus Confidence', 11, 2)
     p8[0].setName('Not Determined')
     p8[1].setName('Low')
     p8[2].setName('Medium')

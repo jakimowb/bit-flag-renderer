@@ -5,7 +5,7 @@ from qps.utils import file_search, zipdir
 from qps.make.make import compileResourceFile
 from os.path import join as jp
 from docutils.core import publish_string
-from bitflagrenderer import DIR_REPO, PATH_ABOUT, PATH_CHANGELOG, VERSION, PATH_LICENSE, URL_ISSUE_TRACKER
+from bitflagrenderer import DIR_REPO, PATH_ABOUT, PATH_CHANGELOG, VERSION, PATH_LICENSE, URL_ISSUE_TRACKER, DIR_ICONS
 
 DIR_BUILD = DIR_REPO / 'build'
 DIR_DOC_SOURCE = DIR_REPO / 'doc' / 'source'
@@ -239,7 +239,7 @@ def build():
     MD.mQgisMaximumVersion = QGIS_MAX
     MD.mAuthor = bitflagrenderer.AUTHOR
     MD.mEmail = bitflagrenderer.MAIL
-    MD.mIcon = 'bitflagrenderer/bitflagimage.png'
+    MD.mIcon = 'bitflagrenderer/icons/bitflagimage.png'
     MD.mTags = ['remote sensing', 'raster', 'flags', 'bit flags', 'landsat']
     print(MD.metadataString())
 

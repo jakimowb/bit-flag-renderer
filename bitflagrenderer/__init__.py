@@ -20,6 +20,7 @@ LOG_MESSAGE_TAG = TITLE
 DIR_REPO = pathlib.Path(__file__).parents[1]
 DIR_EXAMPLE_DATA = DIR_REPO / 'exampledata'
 DIR_BITFLAG_SCHEMES = DIR_REPO / 'bitflagschemes'
+DIR_ICONS = DIR_REPO / 'bitflagrenderer' / 'icons'
 
 PATH_CHANGELOG = DIR_REPO / 'CHANGELOG'
 PATH_LICENSE = DIR_REPO / 'LICENSE.md'

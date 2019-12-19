@@ -1154,21 +1154,26 @@ class SaveFlagSchemeDialog(QDialog, loadFormClass(PATH_UI_SAVE_FLAG_SCHEMA)):
     def filePath(self)->str:
         return self.wSchemeFilePath.filePath()
 
-class BitFlagRenderer(QgsRasterRenderer):
-    """ A raster renderer to show flag states of a single band. """
+class BitFlagRenderer(QgsSingleBandGrayRenderer):
+    """ A raster renderer to show flag states of a single band.
+        Inherits from QgsSingleBandGrayRenderer to function with QGIS Core widgets
+    """
 
-    def __init__(self, input=None, type=TYPE):
-        super(BitFlagRenderer, self).__init__(input=input, type=type)
+    def __init__(self, input=None):
+        super(BitFlagRenderer, self).__init__(input, 1)
 
         self.mFlagScheme : BitFlagScheme
         self.mFlagScheme = BitFlagScheme()
         self.mBand = 1
 
-    def type(self)->str:
-        return TYPE
+    #def type(self)->str:
+    #    return TYPE
 
     def setBand(self, band:int):
         self.mBand = band
+
+    def setGrayBand(self, band):
+        self.setBand(band)
 
     def setBitFlagScheme(self, flagScheme:BitFlagScheme):
         assert isinstance(flagScheme, BitFlagScheme)
@@ -1212,28 +1217,22 @@ class BitFlagRenderer(QgsRasterRenderer):
 
         pass
 
-
     def legendSymbologyItems(self, *args, **kwargs):
         """ Overwritten from parent class. Items for the legend. """
-        transparency = QColor(0,255 , 0 ,0)
+        transparency = QColor(0, 255, 0, 0)
         items = [(self.bitFlagScheme().name(), transparency)]
         for parameter in self.bitFlagScheme().mParameters:
-            items.append((parameter.name(), transparency))
-            b0 = parameter.firstBit()
-            b1 = parameter.lastBit()
-            if b0 == b1:
-                bitPos = '{}'.format(b0)
-            else:
-                bitPos = '{}-{}'.format(b0, b1)
+            assert isinstance(parameter, BitFlagParameter)
+            visibleStates = [s for s in parameter if s.isVisible()]
+            if len(visibleStates) == 0:
+                continue
 
+            items.append(('[{}]'.format(parameter.name()), transparency))
 
-            for flagState in parameter:
+            for flagState in visibleStates:
                 assert isinstance(flagState, BitFlagState)
-
-                if flagState.isVisible():
-                    #item = ('Bit {}:{}:{}'.format(bitPos, flagState.bitNumber(), flagState.name()), flagState.color())
-                    item = (flagState.name(), flagState.color())
-                    items.append(item)
+                item = (flagState.name(), flagState.color())
+                items.append(item)
         return items
 
 

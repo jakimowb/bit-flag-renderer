@@ -1,11 +1,5 @@
 # -*- coding: utf-8 -*-
-import unittest, tempfile, os, collections
-from qgis.testing import start_app, stop_app
-from qgis.core import *
-from qgis.gui import *
-from qgis.PyQt.QtCore import *
-from qgis.PyQt.QtGui import *
-from qgis.PyQt.QtWidgets import *
+import unittest
 
 from qps.testing import initQgisApplication
 from qps.utils import file_search
@@ -279,9 +273,14 @@ class BitFlagRendererTests(unittest.TestCase):
 
     def test_Plugin(self):
 
-        from bitflagrenderer.bitflagrendererplugin import FlagRasterRendererPlugin
+        pluginDir = DIR_REPO.as_posix()
+        addPluginDir = pluginDir not in sys.path
+        if addPluginDir:
+            sys.path.append(pluginDir)
+
+        from bitflagrenderer.bitflagrenderplugin import BitFlagRendererPlugin
         from qgis.utils import iface
-        plugin = FlagRasterRendererPlugin(iface)
+        plugin = BitFlagRendererPlugin(iface)
 
         plugin.initGui()
 
@@ -289,6 +288,35 @@ class BitFlagRendererTests(unittest.TestCase):
         plugin.onLoadExampleData()
 
         plugin.unload()
+
+        if addPluginDir:
+            sys.path.remove(pluginDir)
+
+    def test_RendererRasterPropertiesWidget(self):
+        lyr = self.bitFlagLayer()
+        parameters = self.createBitFlagParameters()
+
+        canvas = QgsMapCanvas()
+        QgsProject.instance().addMapLayer(lyr)
+        canvas.mapSettings().setDestinationCrs(lyr.crs())
+        ext = lyr.extent()
+        ext.scale(1.1)
+        canvas.setExtent(ext)
+        canvas.setLayers([lyr])
+        canvas.show()
+        canvas.waitWhileRendering()
+        canvas.setCanvasColor(QColor('grey'))
+
+        r = BitFlagRenderer()
+        r.setInput(lyr.dataProvider())
+        #lyr.setRenderer(r)
+
+        w = QgsRendererRasterPropertiesWidget(lyr, canvas)
+        w.show()
+        cw = w.currentRenderWidget().renderer().type()
+
+        if SHOW_GUI:
+            QAPP.exec_()
 
 if __name__ == '__main__':
     unittest.main()
