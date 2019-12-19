@@ -14,7 +14,7 @@ tests/outputs
 tests/outputs/*
 test-reports.txt
 test-results/
-
+bitflagrenderer/resources.py
 *.gpkg-shm
 *.gpkg-wal
 
