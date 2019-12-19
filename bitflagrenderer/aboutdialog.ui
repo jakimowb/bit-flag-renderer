@@ -29,8 +29,8 @@
    <string>About Bit Flag Renderer</string>
   </property>
   <property name="windowIcon">
-   <iconset>
-    <normaloff>:/timeseriesviewer/icons/icon.svg</normaloff>:/timeseriesviewer/icons/icon.svg</iconset>
+   <iconset resource="resources.qrc">
+    <normaloff>:/bitflagrenderer/icons/bitflagimage.png</normaloff>:/bitflagrenderer/icons/bitflagimage.png</iconset>
   </property>
   <property name="sizeGripEnabled">
    <bool>false</bool>
