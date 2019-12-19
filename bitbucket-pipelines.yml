@@ -35,7 +35,6 @@ pipelines:
           # - unzip qgisresources.zip
 
           - mkdir test-reports
-          -  mkdir test-reports/today
-          - /bin/bash runtests.sh
+          - mkdir test-reports/today
           - python3 -m nose2 -s tests
           #- set -e
