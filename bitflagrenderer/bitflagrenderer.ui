@@ -7,14 +7,14 @@
     <x>0</x>
     <y>0</y>
     <width>242</width>
-    <height>301</height>
+    <height>269</height>
    </rect>
   </property>
   <property name="windowTitle">
    <string>Form</string>
   </property>
   <property name="windowIcon">
-   <iconset resource="../qpsresources.qrc">
+   <iconset>
     <normaloff>:/qps/ui/icons/raster_flagimage.svg</normaloff>:/qps/ui/icons/raster_flagimage.svg</iconset>
   </property>
   <layout class="QGridLayout" name="gridLayout" columnstretch="0,2,1">
@@ -78,7 +78,7 @@
            <string>-</string>
           </property>
           <property name="icon">
-           <iconset resource="../../../../QGIS/images/images.qrc">
+           <iconset resource="../../../QGIS/images/images.qrc">
             <normaloff>:/images/themes/default/mActionRemove.svg</normaloff>:/images/themes/default/mActionRemove.svg</iconset>
           </property>
           <property name="autoRaise">
@@ -92,7 +92,7 @@
            <string>+</string>
           </property>
           <property name="icon">
-           <iconset resource="../../../../QGIS/images/images.qrc">
+           <iconset resource="../../../QGIS/images/images.qrc">
             <normaloff>:/images/themes/default/mActionAdd.svg</normaloff>:/images/themes/default/mActionAdd.svg</iconset>
           </property>
           <property name="autoRaise">
@@ -112,6 +112,34 @@
            </size>
           </property>
          </spacer>
+        </item>
+        <item>
+         <widget class="QToolButton" name="btnSaveBitFlagScheme">
+          <property name="text">
+           <string>...</string>
+          </property>
+          <property name="icon">
+           <iconset resource="../../../QGIS/images/images.qrc">
+            <normaloff>:/images/themes/default/mActionFileSave.svg</normaloff>:/images/themes/default/mActionFileSave.svg</iconset>
+          </property>
+          <property name="autoRaise">
+           <bool>true</bool>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QToolButton" name="btnLoadBitFlagScheme">
+          <property name="text">
+           <string>...</string>
+          </property>
+          <property name="icon">
+           <iconset resource="../../../QGIS/images/images.qrc">
+            <normaloff>:/images/themes/default/mActionFileOpen.svg</normaloff>:/images/themes/default/mActionFileOpen.svg</iconset>
+          </property>
+          <property name="autoRaise">
+           <bool>true</bool>
+          </property>
+         </widget>
         </item>
        </layout>
       </item>
@@ -194,7 +222,7 @@ QTreeView::branch:open:has-children:has-siblings  {
   </layout>
   <action name="actionAddParameter">
    <property name="icon">
-    <iconset resource="../../../../QGIS/images/images.qrc">
+    <iconset resource="../../../QGIS/images/images.qrc">
      <normaloff>:/images/themes/default/mActionAdd.svg</normaloff>:/images/themes/default/mActionAdd.svg</iconset>
    </property>
    <property name="text">
@@ -206,7 +234,7 @@ QTreeView::branch:open:has-children:has-siblings  {
   </action>
   <action name="actionRemoveParameters">
    <property name="icon">
-    <iconset resource="../../../../QGIS/images/images.qrc">
+    <iconset resource="../../../QGIS/images/images.qrc">
      <normaloff>:/images/themes/default/mActionRemove.svg</normaloff>:/images/themes/default/mActionRemove.svg</iconset>
    </property>
    <property name="text">
@@ -214,6 +242,30 @@ QTreeView::branch:open:has-children:has-siblings  {
    </property>
    <property name="toolTip">
     <string>Removes the selected parameter(s).</string>
+   </property>
+  </action>
+  <action name="actionLoadBitFlagScheme">
+   <property name="icon">
+    <iconset resource="../../../QGIS/images/images.qrc">
+     <normaloff>:/images/themes/default/mActionFileOpen.svg</normaloff>:/images/themes/default/mActionFileOpen.svg</iconset>
+   </property>
+   <property name="text">
+    <string>Load bit Flag Scheme</string>
+   </property>
+   <property name="toolTip">
+    <string>Loads a bit flag scheme</string>
+   </property>
+  </action>
+  <action name="actionSaveBitFlagScheme">
+   <property name="icon">
+    <iconset resource="../../../QGIS/images/images.qrc">
+     <normaloff>:/images/themes/default/mActionFileSave.svg</normaloff>:/images/themes/default/mActionFileSave.svg</iconset>
+   </property>
+   <property name="text">
+    <string>Save Bit Flag Scheme</string>
+   </property>
+   <property name="toolTip">
+    <string>Saves the current Bit Flag Scheme</string>
    </property>
   </action>
  </widget>
@@ -233,6 +285,7 @@ QTreeView::branch:open:has-children:has-siblings  {
  <resources>
   <include location="../../../../QGIS/images/images.qrc"/>
   <include location="../qpsresources.qrc"/>
+  <include location="../../../QGIS/images/images.qrc"/>
  </resources>
  <connections/>
 </ui>

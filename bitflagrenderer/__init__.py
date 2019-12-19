@@ -1,4 +1,5 @@
-import pathlib
+import pathlib, os
+
 VERSION = '0.1'
 __version__ = '<dummy>'
 TITLE = 'Bit Flag Renderer'
@@ -17,6 +18,14 @@ DEPENDENCIES = ['numpy', 'gdal']
 
 LOG_MESSAGE_TAG = TITLE
 DIR_REPO = pathlib.Path(__file__).parents[1]
+DIR_EXAMPLE_DATA = DIR_REPO / 'exampledata'
+DIR_BITFLAG_SCHEMES = DIR_REPO / 'bitflagschemes'
+
 PATH_CHANGELOG = DIR_REPO / 'CHANGELOG'
 PATH_LICENSE = DIR_REPO / 'LICENSE.md'
 PATH_ABOUT = DIR_REPO / 'ABOUT.html'
+
+PATH_RESOURCES = pathlib.Path(__file__).parents[0] / 'resources.py'
+if os.path.isfile(PATH_RESOURCES):
+    import bitflagrenderer.resources
+    bitflagrenderer.resources.qInitResources()

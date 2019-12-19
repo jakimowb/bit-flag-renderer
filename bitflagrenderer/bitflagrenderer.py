@@ -1,4 +1,4 @@
-import sys, os, re, pathlib, pickle, typing, enum, copy, bisect, io
+import sys, os, re, pathlib, pickle, typing, enum, copy, bisect, io, json, enum, collections
 from qgis.core import *
 from qgis.gui import *
 import qgis.utils
@@ -9,12 +9,31 @@ from qgis.PyQt.QtXml import *
 from qgis.PyQt.uic import loadUiType
 from osgeo import gdal
 import numpy as np
+from bitflagrenderer import DIR_BITFLAG_SCHEMES, DIR_EXAMPLE_DATA
 PATH_UI = os.path.join(os.path.dirname(__file__), 'bitflagrenderer.ui')
-PATH_ICON = os.path.join(os.path.dirname(__file__), 'bitflagimage.png')
+PATH_ABOUT_UI = os.path.join(os.path.dirname(__file__), 'aboutdialog.ui')
+PATH_ICON = os.path.join(os.path.dirname(__file__), *['icons', 'bitflagimage.png'])
+PATH_UI_SAVE_FLAG_SCHEMA = os.path.join(os.path.dirname(__file__), 'saveflagschemadialog.ui')
 assert os.path.isfile(PATH_ICON)
 
-FACTORY = None
 TYPE = 'BitFlagRenderer'
+
+def settings()->QSettings:
+    """
+    Returns the Bit Flag Renderer settings.
+    :return: QSettings
+    """
+    settings = QSettings(QSettings.UserScope, 'HU-Berlin', TYPE)
+
+    return settings
+
+class SettingsKeys(enum.Enum):
+
+    TreeViewState = 'tree_view_state'
+    BitFlagSchemes = 'bit_flag_schemes'
+
+FACTORY = None
+
 
 QGIS2NUMPY_DATA_TYPES = {Qgis.Byte: np.byte,
                          Qgis.UInt16: np.uint16,
@@ -73,11 +92,17 @@ def loadFormClass(pathUi: str):
         if sClass.startswith('Qgs'):
             cHeader.setNodeValue('qgis.gui')
 
-        # collect resource file locations
-        includes = doc.elementsByTagName('include')
-        for i in range(includes.count()):
-            node = includes.item(i).toElement()
-            toRemove.append(node)
+    # remove resource file locations
+    includes = doc.elementsByTagName('include')
+    for i in range(includes.count()):
+        node = includes.item(i).toElement()
+        toRemove.append(node)
+    # collect resource file locations
+    tmpDirs = []
+
+    dirUI =  os.path.dirname(pathUi)
+    if not dirUI in sys.path:
+        tmpDirs.append(dirUI)
 
     for prop in toRemove:
         prop.parentNode().removeChild(prop)
@@ -89,9 +114,15 @@ def loadFormClass(pathUi: str):
     buffer.seek(0)
 
     # load form class
+    for p in tmpDirs:
+        sys.path.append(p)
+
     FORM_CLASS, _ = loadUiType(buffer, resource_suffix='')
     buffer.close()
     # remove temporary added directories from python path
+
+    for p in tmpDirs:
+        sys.path.remove(p)
 
     return FORM_CLASS
 
@@ -134,9 +165,66 @@ def contrastColor(c:QColor)->QColor:
     else:
         return QColor('black')
 
+
+class AboutBitFlagRenderer(QDialog, loadFormClass(PATH_ABOUT_UI)):
+    def __init__(self, parent=None):
+        """Constructor."""
+        super(AboutBitFlagRenderer, self).__init__(parent)
+        self.setupUi(self)
+        self.setWindowFlags(self.windowFlags() & ~Qt.WindowContextHelpButtonHint)
+        self.init()
+
+    def init(self):
+        self.mTitle = self.windowTitle()
+        self.listWidget.currentItemChanged.connect(lambda: self.setAboutTitle())
+        self.setAboutTitle()
+
+        # page About
+        from bitflagrenderer import PATH_LICENSE, VERSION, PATH_CHANGELOG, PATH_ABOUT
+        self.labelVersion.setText('{}'.format(VERSION))
+
+        def readTextFile(path):
+            if os.path.isfile(path):
+                f = open(path, encoding='utf-8')
+                txt = f.read()
+                f.close()
+            else:
+                txt = 'unable to read {}'.format(path)
+            return txt
+
+        # page Changed
+        self.tbAbout.setHtml(readTextFile(PATH_ABOUT))
+        self.tbChanges.setHtml(readTextFile(PATH_CHANGELOG.as_posix() + '.html'))
+        self.tbLicense.setHtml(readTextFile(os.path.splitext(PATH_LICENSE)[0] + '.html'))
+
+    def setAboutTitle(self, suffix=None):
+        item = self.listWidget.currentItem()
+
+        if item:
+            title = '{} | {}'.format(self.mTitle, item.text())
+        else:
+            title = self.mTitle
+        if suffix:
+            title += ' ' + suffix
+        self.setWindowTitle(title)
+
+
 class BitFlagState(object):
 
-    def __init__(self, offset:int, number:int, name:str=None, color:QColor=None):
+    @staticmethod
+    def fromXml(element: QDomElement):
+        assert isinstance(element, QDomElement)
+        if element.isNull() or element.nodeName() != BitFlagState.__name__:
+            return None
+
+        name = element.attribute('name')
+        bitNumber = int(element.attribute('number'))
+        visible = bool(element.attribute('visible'))
+        color = QColor(element.attribute('color'))
+        state = BitFlagState(0, bitNumber, name=name, color=color, isVisible=visible)
+        return state
+
+    def __init__(self, offset:int, number:int, name:str=None, color:QColor=None, isVisible:bool=False):
 
         self.mBitShift:int
         self.mBitShift = offset
@@ -158,7 +246,7 @@ class BitFlagState(object):
         self.mColor = color
 
         self.mVisible:bool
-        self.mVisible = True
+        self.mVisible = isVisible
 
     def __len__(self):
         return 0
@@ -199,6 +287,20 @@ class BitFlagState(object):
     def setColor(self, color):
         self.mColor = QColor(color)
 
+
+    def writeXml(self, doc:QDomDocument, parentElement:QDomElement):
+
+        if parentElement.isNull():
+            return
+
+        stateNode = doc.createElement(self.__class__.__name__)
+        stateNode.setAttribute('name', self.name())
+        stateNode.setAttribute('visible', self.isVisible())
+        stateNode.setAttribute('color', self.color().name(QColor.HexArgb))
+        stateNode.setAttribute('number', self.bitNumber())
+
+        parentElement.appendChild(stateNode)
+
     def __eq__(self, other):
         if not isinstance(other, BitFlagState):
             return False
@@ -219,6 +321,29 @@ class BitFlagParameter(object):
     """
     A class to define possible states of a flag / flag-set
     """
+    @staticmethod
+    def fromXml(element:QDomElement):
+        assert isinstance(element, QDomElement)
+        if element.isNull() or element.nodeName() != BitFlagParameter.__name__:
+            return None
+
+        name = element.attribute('name')
+        firstBit = int(element.attribute('firstBit'))
+        bitCount = int(element.attribute('bitCount'))
+
+        parameter = BitFlagParameter(name, firstBit, bitCount)
+        stateNodes = element.elementsByTagName(BitFlagState.__name__)
+
+        for i in range(min(len(parameter), stateNodes.count())):
+            state = BitFlagState.fromXml(stateNodes.at(i).toElement())
+
+            if isinstance(state, BitFlagState):
+                state.mBitShift = firstBit
+                parameter.mFlagStates[i] = state
+
+        return parameter
+
+
 
     def __init__(self, name:str, firstBit:int, bitCount:int=1):
         assert isinstance(name, str)
@@ -244,6 +369,13 @@ class BitFlagParameter(object):
             state = BitFlagState(self.mStartBit, i, name, color=color)
             self.mFlagStates.append(state)
 
+        # a good default for 1-bit flags
+        if bitCount == 1:
+            self[0].setValues('No', QColor('white'), False)
+            self[1].setValues('Yes', QColor('black'), False)
+        else:
+            self[0].setValues('No', QColor('white'), False)
+
     def __eq__(self, other):
         if not isinstance(other, BitFlagParameter):
             return None
@@ -254,8 +386,6 @@ class BitFlagParameter(object):
                 return False
 
         return True
-
-
 
     def __contains__(self, item):
         return item in self.mFlagStates
@@ -328,9 +458,164 @@ class BitFlagParameter(object):
         """
         return self.mStartBit + self.mBitSize - 1
 
+    def writeXml(self, doc:QDomDocument, parentElement:QDomElement):
+
+        if parentElement.isNull():
+            return
+
+        parameterNode = doc.createElement(self.__class__.__name__)
+        parameterNode.setAttribute('name', self.name())
+        parameterNode.setAttribute('firstBit', self.firstBit())
+        parameterNode.setAttribute('bitCount', self.bitCount())
+        for state in self:
+            state.writeXml(doc, parameterNode)
+
+        parentElement.appendChild(parameterNode)
+
+class BitFlagScheme(object):
+
+    @staticmethod
+    def loadAllSchemes() -> collections.OrderedDict:
+        """
+        Loads BitFlagSchemes.
+        :return:
+        :rtype:
+        """
+        SCHEMES = collections.OrderedDict()
+
+        import bitflagrenderer.bitflagschemes as bfs
+        schemes = [bfs.Landsat8_QA(),
+                   bfs.LandsatTM_QA(),
+                   bfs.LandsatMSS_QA(),
+                   bfs.FORCE_QAI()]
+        for s in schemes:
+            SCHEMES[s.name()] = s
+
+        if os.path.isdir(DIR_BITFLAG_SCHEMES):
+            schemes = []
+            for entry in os.scandir(DIR_BITFLAG_SCHEMES):
+                if entry.is_file and entry.path.endswith('.xml'):
+                    fileSchemes = BitFlagScheme.fromFile(entry.path)
+                    schemes.extend(fileSchemes)
+            schemes = sorted(schemes, key=lambda s: s.name())
+            for s in schemes:
+                SCHEMES[s.name()] = s
+
+        return SCHEMES
+
+
+    @staticmethod
+    def fromFile(path:str)->typing.List:
+        schemes = []
+        if os.path.isfile(path):
+            with open(path, 'r', encoding='utf-8') as f:
+                xml = f.read()
+                dom = QDomDocument()
+                dom.setContent(xml)
+
+
+                schemeNodes = dom.elementsByTagName(BitFlagScheme.__name__)
+                for i in range(schemeNodes.count()):
+                    scheme = BitFlagScheme.fromXml(schemeNodes.at(i).toElement())
+                    if isinstance(scheme, BitFlagScheme):
+                        schemes.append(scheme)
+
+        return schemes
+
+
+    def __init__(self, name:str='unspecified name'):
+
+        self.mName : str
+        self.mName = name
+
+        self.mNoDataColor = QColor(0, 255, 0, 0)
+
+        self.mParameters : list
+        self.mParameters = []
+
+    def __eq__(self, other):
+
+        if not isinstance(other, BitFlagScheme):
+            return False
+        if self.name() != other.name():
+            return False
+        if self.mNoDataColor != other.mNoDataColor:
+            return False
+        if self.mParameters != other.mParameters:
+            return False
+        return True
+
+    def __len__(self):
+        return len(self.mParameters)
+
+    def __iter__(self)->typing.List[BitFlagParameter]:
+        return iter(self.mParameters)
+
+    def __contains__(self, item):
+        return item in self.mParameters
+
+    def __getitem__(self, slice):
+        return self.mParameters[slice]
+
+    @staticmethod
+    def fromXml(element: QDomElement):
+        assert isinstance(element, QDomElement)
+        if element.isNull() or element.nodeName() != BitFlagScheme.__name__:
+            return None
+
+        scheme = BitFlagScheme()
+        scheme.setName(element.attribute('name'))
+        scheme.setNoDataColor(element.attribute('noDataColor'))
+
+
+        parameterNodes = element.elementsByTagName(BitFlagParameter.__name__)
+        for i in range(parameterNodes.count()):
+            parameter = BitFlagParameter.fromXml(parameterNodes.at(i).toElement())
+            if isinstance(parameter, BitFlagParameter):
+                scheme.mParameters.append(parameter)
+
+        return scheme
 
 
 
+
+
+    def noDataColor(self)->QColor:
+        return self.mNoDataColor
+
+    def setNoDataColor(self, color):
+        self.mNoDataColor = QColor(color)
+
+    def setName(self, name:str):
+        assert isinstance(name, str)
+        self.mName = name
+
+    def name(self)->str:
+        return self.mName
+
+    def writeXMLFile(self, path):
+
+        doc = QDomDocument()
+
+        root = doc.createElement(self.__class__.__name__+'s')
+        self.writeXml(doc, root)
+        doc.appendChild(root)
+
+        with open(path, 'w', encoding='utf-8') as f:
+            f.write(doc.toString())
+
+    def writeXml(self, doc:QDomDocument, parentElement:QDomElement):
+
+        if parentElement.isNull():
+            return
+
+        schemeNode = doc.createElement(self.__class__.__name__)
+        schemeNode.setAttribute('noDataColor', self.noDataColor().name(QColor.HexArgb))
+        schemeNode.setAttribute('name', self.name())
+
+        for parameter in self:
+            parameter.writeXml(doc, schemeNode)
+        parentElement.appendChild(schemeNode)
 
 class BitFlagModel(QAbstractItemModel):
 
@@ -639,8 +924,6 @@ class BitFlagRendererWidget(QgsRasterRendererWidget, loadFormClass(PATH_UI)):
 
         assert isinstance(self.mTreeView, QTreeView)
 
-
-
         self.mFlagModel:BitFlagModel
         self.mFlagModel = BitFlagModel()
         self.mProxyModel = QSortFilterProxyModel()
@@ -652,38 +935,55 @@ class BitFlagRendererWidget(QgsRasterRendererWidget, loadFormClass(PATH_UI)):
         self.mFlagModel.dataChanged.connect(self.widgetChanged.emit)
         self.mFlagModel.rowsInserted.connect(self.widgetChanged.emit)
         self.mFlagModel.rowsRemoved.connect(self.widgetChanged.emit)
+        self.widgetChanged.connect(self.saveTreeViewState)
 
         self.mTreeView.selectionModel().selectionChanged.connect(self.onSelectionChanged)
         self.mTreeView.doubleClicked.connect(self.onTreeViewDoubleClick)
         self.mTreeView.header().setSectionResizeMode(QHeaderView.ResizeToContents)
 
+        state = settings().value(SettingsKeys.TreeViewState.value, None)
+        if isinstance(state, QByteArray):
+            self.mTreeView.setState(state)
+
+        self.mLastBitFlagSchemeName = 'Bit Flag scheme'
+        self.mNoDataColor = QColor(0,0,0,0)
+
         self.actionAddParameter.triggered.connect(self.onAddParameter)
         self.actionRemoveParameters.triggered.connect(self.onRemoveParameters)
+        self.actionLoadBitFlagScheme.triggered.connect(self.setBitFlagScheme)
+        self.actionSaveBitFlagScheme.triggered.connect(self.saveBitFlagScheme)
+
         self.btnAddFlag.setDefaultAction(self.actionAddParameter)
         self.btnRemoveFlags.setDefaultAction(self.actionRemoveParameters)
-
+        self.btnSaveBitFlagScheme.setDefaultAction(self.actionSaveBitFlagScheme)
+        self.btnLoadBitFlagScheme.setDefaultAction(self.actionLoadBitFlagScheme)
         self.updateWidgets()
 
+    def saveBitFlagScheme(self):
+        scheme = BitFlagScheme(self.mLastBitFlagSchemeName)
+        scheme.mParameters.extend(self.mFlagModel.mFlagParameters)
+        SaveFlagSchemeDialog.save(scheme)
 
-    def onTreeViewDoubleClick(self, idx):
-        idx = self.mProxyModel.mapToSource(idx)
-        item = idx.internalPointer()
-        cname = self.mFlagModel.columnNames()[idx.column()]
-        if isinstance(item, BitFlagState) and cname == self.mFlagModel.cnColor:
-            c = QColorDialog.getColor(item.color(), self.treeView(), \
-                                      'Set color for "{}"'.format(item.name()))
 
-            self.mFlagModel.setData(idx, c, role=Qt.EditRole)
 
-    def setRasterLayer(self, layer:QgsRasterLayer):
-        super(BitFlagRendererWidget, self).setRasterLayer(layer)
-        self.mRasterBandComboBox.setLayer(layer)
+    def setBitFlagScheme(self, scheme:BitFlagScheme=None, name:str=None):
 
-        if layer.isValid() and isinstance(layer.renderer(), BitFlagRenderer):
+        if not isinstance(scheme, BitFlagScheme):
+            schemes = BitFlagScheme.loadAllSchemes()
+            names = list(schemes.keys())
+
+            if name is None:
+                name, b = QInputDialog.getItem(self, 'Select Flag Scheme', 'Scheme', names, editable=False)
+                if b:
+                    scheme = schemes.get(name)
+
+        if isinstance(scheme, BitFlagScheme):
+            self.mLastBitFlagSchemeName = scheme.name()
+            self.mNoDataColor = scheme.noDataColor()
 
             self.mFlagModel.beginResetModel()
             self.mFlagModel.mFlagParameters.clear()
-            self.mFlagModel.mFlagParameters.extend(layer.renderer().flagParameters())
+            self.mFlagModel.mFlagParameters.extend(scheme.mParameters)
             self.mFlagModel.endResetModel()
 
             self.mTreeView.setUpdatesEnabled(False)
@@ -695,6 +995,36 @@ class BitFlagRendererWidget(QgsRasterRendererWidget, loadFormClass(PATH_UI)):
                     self.mTreeView.setExpanded(idxP, item.mIsExpanded)
 
             self.mTreeView.setUpdatesEnabled(True)
+
+        pass
+
+    def bitFlagScheme(self)->BitFlagScheme:
+
+        scheme = BitFlagScheme(self.mLastBitFlagSchemeName)
+        scheme.mNoDataColor = QColor(self.mNoDataColor)
+        scheme.mParameters.extend(copy.copy(self.mFlagModel.mFlagParameters))
+        return scheme
+
+    def saveTreeViewState(self):
+        settings().setValue(SettingsKeys.TreeViewState.value, self.treeView().state())
+
+    def onTreeViewDoubleClick(self, idx):
+        idx = self.mProxyModel.mapToSource(idx)
+        item = idx.internalPointer()
+        cname = self.mFlagModel.columnNames()[idx.column()]
+        if isinstance(item, BitFlagState) and cname == self.mFlagModel.cnColor:
+            c = QgsColorDialog.getColor(item.color(), self.treeView(), \
+                                      'Set color for "{}"'.format(item.name()))
+
+            self.mFlagModel.setData(idx, c, role=Qt.EditRole)
+
+    def setRasterLayer(self, layer:QgsRasterLayer):
+        super(BitFlagRendererWidget, self).setRasterLayer(layer)
+        self.mRasterBandComboBox.setLayer(layer)
+
+        if layer.isValid() and isinstance(layer.renderer(), BitFlagRenderer):
+
+            self.setBitFlagScheme(layer.renderer().bitFlagScheme())
 
     def onSelectionChanged(self, selected, deselected):
         self.updateWidgets()
@@ -727,6 +1057,7 @@ class BitFlagRendererWidget(QgsRasterRendererWidget, loadFormClass(PATH_UI)):
         r.setInput(self.rasterLayer().dataProvider())
         r.setBand(self.selectedBand())
 
+        scheme = BitFlagScheme(self.mLastBitFlagSchemeName)
         parameters = []
         for row in range(self.mFlagModel.rowCount()):
 
@@ -738,8 +1069,8 @@ class BitFlagRendererWidget(QgsRasterRendererWidget, loadFormClass(PATH_UI)):
             par.mIsExpanded = b
             par = copy.deepcopy(par)
             parameters.append(par)
-
-        r.setFlagParameters(parameters)
+        scheme.mParameters.extend(parameters)
+        r.setBitFlagScheme(scheme)
 
         return r
 
@@ -784,6 +1115,44 @@ class BitFlagRendererWidget(QgsRasterRendererWidget, loadFormClass(PATH_UI)):
 
 
 
+class SaveFlagSchemeDialog(QDialog, loadFormClass(PATH_UI_SAVE_FLAG_SCHEMA)):
+
+    @staticmethod
+    def save(schema:BitFlagScheme):
+        d = SaveFlagSchemeDialog(schema)
+        if d.exec_() == QDialog.Accepted:
+
+            schema = copy.deepcopy(schema)
+            schema.setName(d.schemaName())
+            schema.writeXMLFile(d.filePath())
+
+
+    def __init__(self, schema:BitFlagScheme, parent=None):
+        super(SaveFlagSchemeDialog, self).__init__(parent=parent)
+        self.setupUi(self)
+        assert isinstance(schema, BitFlagScheme)
+        self.mSchema = copy.deepcopy(schema)
+
+        self.wSchemeFilePath.setStorageMode(QgsFileWidget.SaveFile)
+        filter = 'XML files (*.xml);;Any files (*)'
+        self.wSchemeFilePath.setFilter(filter)
+        root = DIR_BITFLAG_SCHEMES.as_posix()
+        self.wSchemeFilePath.setDefaultRoot(root)
+        self.tbSchemaName.setText(schema.name())
+
+        filePath = schema.name().encode().decode('ascii', 'replace').replace(u'\ufffd', '_')
+        filePath = re.sub(r'[ ]', '_', filePath)+'.xml'
+        filePath = os.path.join(root, filePath)
+        self.wSchemeFilePath.setFilePath(filePath)
+
+    def schemaName(self)->str:
+        return self.tbSchemaName.text()
+
+    def schema(self)->BitFlagScheme:
+        return self.mSchema
+
+    def filePath(self)->str:
+        return self.wSchemeFilePath.filePath()
 
 class BitFlagRenderer(QgsRasterRenderer):
     """ A raster renderer to show flag states of a single band. """
@@ -791,9 +1160,8 @@ class BitFlagRenderer(QgsRasterRenderer):
     def __init__(self, input=None, type=TYPE):
         super(BitFlagRenderer, self).__init__(input=input, type=type)
 
-        self.mFlagParameters:typing.List[BitFlagParameter]
-        self.mFlagParameters = []
-        self.mNoDataColor = QColor(0, 255, 0, 0)
+        self.mFlagScheme : BitFlagScheme
+        self.mFlagScheme = BitFlagScheme()
         self.mBand = 1
 
     def type(self)->str:
@@ -802,12 +1170,12 @@ class BitFlagRenderer(QgsRasterRenderer):
     def setBand(self, band:int):
         self.mBand = band
 
-    def setFlagParameters(self, flagParameters:typing.List[BitFlagParameter]):
-        self.mFlagParameters.clear()
-        self.mFlagParameters.extend(flagParameters)
+    def setBitFlagScheme(self, flagScheme:BitFlagScheme):
+        assert isinstance(flagScheme, BitFlagScheme)
+        self.mFlagScheme = flagScheme
 
-    def flagParameters(self)->typing.List[BitFlagParameter]:
-        return self.mFlagParameters[:]
+    def bitFlagScheme(self)->BitFlagScheme:
+        return self.mFlagScheme
 
     def __reduce_ex__(self, protocol):
         return self.__class__, (), self.__getstate__()
@@ -847,8 +1215,10 @@ class BitFlagRenderer(QgsRasterRenderer):
 
     def legendSymbologyItems(self, *args, **kwargs):
         """ Overwritten from parent class. Items for the legend. """
-        items = []
-        for parameter in self.flagParameters():
+        transparency = QColor(0,255 , 0 ,0)
+        items = [(self.bitFlagScheme().name(), transparency)]
+        for parameter in self.bitFlagScheme().mParameters:
+            items.append((parameter.name(), transparency))
             b0 = parameter.firstBit()
             b1 = parameter.lastBit()
             if b0 == b1:
@@ -861,7 +1231,8 @@ class BitFlagRenderer(QgsRasterRenderer):
                 assert isinstance(flagState, BitFlagState)
 
                 if flagState.isVisible():
-                    item = ('Bit {}:{}:{}'.format(bitPos, flagState.bitNumber(), flagState.name()), flagState.color())
+                    #item = ('Bit {}:{}:{}'.format(bitPos, flagState.bitNumber(), flagState.name()), flagState.color())
+                    item = (flagState.name(), flagState.color())
                     items.append(item)
         return items
 
@@ -880,13 +1251,13 @@ class BitFlagRenderer(QgsRasterRenderer):
 
         # see https://github.com/Septima/qgis-hillshaderenderer/blob/master/hillshaderenderer.py
         nb = self.input().bandCount()
+        scheme = self.bitFlagScheme()
 
         output_block = QgsRasterBlock(Qgis.ARGB32_Premultiplied, width, height)
         color_array = np.frombuffer(output_block.data(), dtype=QGIS2NUMPY_DATA_TYPES[output_block.dataType()])
-        color_array[:] = self.mNoDataColor.rgba()
+        color_array[:] = scheme.noDataColor().rgba()
 
-        if len(self.mFlagParameters) == 0:
-            print(input_missmatch, file=sys.stderr)
+        if len(self.bitFlagScheme()) == 0:
             output_block.setData(color_array.tobytes())
             return output_block
 
@@ -901,7 +1272,7 @@ class BitFlagRenderer(QgsRasterRenderer):
         #block_data[b, :] = band_data
 
         parameterNumbers = np.zeros(band_data.shape, dtype=np.uint8)
-        for i, flagParameter in enumerate(self.mFlagParameters):
+        for i, flagParameter in enumerate(self.bitFlagScheme()):
             b0 = flagParameter.firstBit()
 
             # extract the parameter number
@@ -922,8 +1293,8 @@ class BitFlagRenderer(QgsRasterRenderer):
     def clone(self) -> QgsRasterRenderer:
         """ Overwritten from parent class. """
         r = BitFlagRenderer()
-        parameters = [copy.copy(par) for par in self.mFlagParameters]
-        r.setFlagParameters(parameters)
+        scheme = copy.deepcopy(self.bitFlagScheme())
+        r.setBitFlagScheme(scheme)
 
         return r
 

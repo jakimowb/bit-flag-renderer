@@ -2,6 +2,7 @@ import os, sys, pathlib, re, datetime, shutil
 from pb_tool import pb_tool
 import git
 from qps.utils import file_search, zipdir
+from qps.make.make import compileResourceFile
 from os.path import join as jp
 from docutils.core import publish_string
 from bitflagrenderer import DIR_REPO, PATH_ABOUT, PATH_CHANGELOG, VERSION, PATH_LICENSE, URL_ISSUE_TRACKER
@@ -44,6 +45,11 @@ def mkDir(d, delete=False):
     if not os.path.isdir(d):
         os.makedirs(d)
 
+
+def compileResourceFiles():
+
+    for path in file_search(DIR_REPO / 'bitflagrenderer', '*.qrc', recursive=True):
+        compileResourceFile(path)
 
 
 class QGISMetadataFileWriter(object):
@@ -317,4 +323,5 @@ def build():
     print('Finished')
 
 if __name__ == "__main__":
+    compileResourceFiles()
     build()

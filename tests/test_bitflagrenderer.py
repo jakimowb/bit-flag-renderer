@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-import unittest
+import unittest, tempfile, os, collections
 from qgis.testing import start_app, stop_app
 from qgis.core import *
 from qgis.gui import *
@@ -8,13 +8,20 @@ from qgis.PyQt.QtGui import *
 from qgis.PyQt.QtWidgets import *
 
 from qps.testing import initQgisApplication
+from qps.utils import file_search
 from bitflagrenderer.bitflagrenderer import *
 
 QAPP = initQgisApplication()
-SHOW_GUI = False and os.environ.get('CI') is None
+SHOW_GUI = True and os.environ.get('CI') is None
 
-pathFlagImage = r'J:\diss_bj\level2\s-america\X0048_Y0025\20140826_LEVEL2_LND07_QAI.tif'
 
+from bitflagrenderer import DIR_EXAMPLE_DATA, DIR_REPO
+pathFlagImage = list(file_search(DIR_EXAMPLE_DATA, re.compile(r'.*BQA.*\.tif$')))[0]
+pathTOAImage = list(file_search(DIR_EXAMPLE_DATA, re.compile(r'.*TOA.*\.tif$')))[0]
+
+
+DIR_TMP = DIR_REPO / 'tmp'
+os.makedirs(DIR_TMP, exist_ok=True)
 
 class BitFlagRendererTests(unittest.TestCase):
 
@@ -44,6 +51,12 @@ class BitFlagRendererTests(unittest.TestCase):
         parCloudState[3].setValues('cirrus', QColor('blue'), True)
 
         return [parValid, parCloudState]
+
+    def createBitFlagScheme(self)->BitFlagScheme:
+
+        scheme = BitFlagScheme(name='test scheme')
+        scheme.mParameters.extend(self.createBitFlagParameters())
+        return scheme
 
     def test_BitFlagStates(self):
 
@@ -131,10 +144,54 @@ class BitFlagRendererTests(unittest.TestCase):
         top.layout().addLayout(v)
         top.show()
 
+
+        w.saveTreeViewState()
+
+
+        w.setBitFlagScheme()
+
         if SHOW_GUI:
             QAPP.exec_()
 
 
+    def test_BitFlagSchemes(self):
+
+        lyr = self.bitFlagLayer()
+        from bitflagrenderer.bitflagschemes import FORCE_QAI
+        scheme1 = FORCE_QAI()
+        self.assertIsInstance(scheme1, BitFlagScheme)
+
+        w = BitFlagRendererWidget(lyr, lyr.extent())
+        w.setBitFlagScheme(scheme1)
+
+        r = w.renderer().clone()
+        self.assertIsInstance(r, BitFlagRenderer)
+        self.assertEqual(r.bitFlagScheme(), scheme1)
+
+        tmpPath = DIR_TMP / 'test.xml'
+
+        scheme1.setName('test')
+        scheme1.writeXMLFile(tmpPath)
+
+        savesSchemes = BitFlagScheme.fromFile(tmpPath)
+        self.assertListEqual(savesSchemes, [scheme1])
+
+        allSchemes = BitFlagScheme.loadAllSchemes()
+        self.assertIsInstance(allSchemes, collections.OrderedDict)
+        for k, v in allSchemes.items():
+            self.assertIsInstance(v, BitFlagScheme)
+            self.assertEqual(k, v.name())
+
+    def test_SaveFlagSchemeDialog(self):
+
+        schema = self.createBitFlagScheme()
+        d = SaveFlagSchemeDialog(schema)
+
+        self.assertEqual(schema, d.schema())
+
+        if SHOW_GUI:
+            if d.exec_() == QDialog.Accepted:
+                s = ""
 
     def test_BitFlagRenderer(self):
 
@@ -147,12 +204,13 @@ class BitFlagRendererTests(unittest.TestCase):
         renderer.setInput(lyr.dataProvider())
         renderer.setBand(1)
 
-        flagPars = self.createBitFlagParameters()
-
-        renderer.setFlagParameters(flagPars)
+        scheme = self.createBitFlagScheme()
+        renderer.setBitFlagScheme(scheme)
         lyr.setRenderer(renderer)
 
-        self.assertListEqual(flagPars, renderer.flagParameters())
+
+        self.assertEqual(scheme, renderer.bitFlagScheme())
+        self.assertListEqual(scheme.mParameters, renderer.bitFlagScheme().mParameters)
         colorBlock = renderer.block(0, lyr.extent(), 200, 200)
 
 
@@ -209,6 +267,28 @@ class BitFlagRendererTests(unittest.TestCase):
 
         registerConfigWidgetFactory()
         unregisterConfigWidgetFactory()
+
+    def test_AboutDialog(self):
+
+        d = AboutBitFlagRenderer()
+        d.show()
+
+        if SHOW_GUI:
+            QAPP.exec_()
+
+
+    def test_Plugin(self):
+
+        from bitflagrenderer.bitflagrendererplugin import FlagRasterRendererPlugin
+        from qgis.utils import iface
+        plugin = FlagRasterRendererPlugin(iface)
+
+        plugin.initGui()
+
+        plugin.onAboutAction(_testing=True)
+        plugin.onLoadExampleData()
+
+        plugin.unload()
 
 if __name__ == '__main__':
     unittest.main()
