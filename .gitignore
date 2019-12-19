@@ -18,6 +18,8 @@ bitflagrenderer/resources.py
 *.gpkg-shm
 *.gpkg-wal
 
+*~$*.*
+
 # Untrack compiled files
 *.pyc 
 *.pyd
