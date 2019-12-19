@@ -1,4 +1,19 @@
 # -*- coding: utf-8 -*-
+"""
+***************************************************************************
+        begin                : 2019-12-19
+        copyright            : (C) 2019 by Benjamin Jakimow
+        email                : benjamin.jakimow[at]geo.hu-berlin.de
+***************************************************************************
+*                                                                         *
+*   This program is free software; you can redistribute it and/or modify  *
+*   it under the terms of the GNU General Public License as published by  *
+*   the Free Software Foundation; either version 3 of the License, or     *
+*   (at your option) any later version.                                   *
+*                                                                         *
+***************************************************************************/
+"""
+
 import unittest
 
 from qps.testing import initQgisApplication
@@ -6,7 +21,7 @@ from qps.utils import file_search
 from bitflagrenderer.bitflagrenderer import *
 
 QAPP = initQgisApplication()
-SHOW_GUI = True and os.environ.get('CI') is None
+SHOW_GUI = False and os.environ.get('CI') is None
 
 
 from bitflagrenderer import DIR_EXAMPLE_DATA, DIR_REPO
@@ -142,7 +157,7 @@ class BitFlagRendererTests(unittest.TestCase):
         w.saveTreeViewState()
 
 
-        w.setBitFlagScheme()
+        #w.setBitFlagScheme()
 
         if SHOW_GUI:
             QAPP.exec_()
@@ -309,7 +324,7 @@ class BitFlagRendererTests(unittest.TestCase):
 
         r = BitFlagRenderer()
         r.setInput(lyr.dataProvider())
-        #lyr.setRenderer(r)
+        lyr.setRenderer(r)
 
         w = QgsRendererRasterPropertiesWidget(lyr, canvas)
         w.show()

@@ -1,3 +1,19 @@
+# -*- coding: utf-8 -*-
+"""
+***************************************************************************
+        begin                : 2019-12-19
+        copyright            : (C) 2019 by Benjamin Jakimow
+        email                : benjamin.jakimow[at]geo.hu-berlin.de
+***************************************************************************
+*                                                                         *
+*   This program is free software; you can redistribute it and/or modify  *
+*   it under the terms of the GNU General Public License as published by  *
+*   the Free Software Foundation; either version 3 of the License, or     *
+*   (at your option) any later version.                                   *
+*                                                                         *
+***************************************************************************/
+"""
+
 # Configuration file for the Sphinx documentation builder.
 #
 # This file only contains a selection of the most common options. For a full

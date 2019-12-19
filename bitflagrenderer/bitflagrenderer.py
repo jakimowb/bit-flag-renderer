@@ -1,3 +1,19 @@
+# -*- coding: utf-8 -*-
+"""
+***************************************************************************
+        begin                : 2019-12-19
+        copyright            : (C) 2019 by Benjamin Jakimow
+        email                : benjamin.jakimow[at]geo.hu-berlin.de
+***************************************************************************
+*                                                                         *
+*   This program is free software; you can redistribute it and/or modify  *
+*   it under the terms of the GNU General Public License as published by  *
+*   the Free Software Foundation; either version 3 of the License, or     *
+*   (at your option) any later version.                                   *
+*                                                                         *
+***************************************************************************/
+"""
+
 import sys, os, re, pathlib, pickle, typing, enum, copy, bisect, io, json, enum, collections
 from qgis.core import *
 from qgis.gui import *
@@ -528,7 +544,7 @@ class BitFlagScheme(object):
         self.mName : str
         self.mName = name
 
-        self.mNoDataColor = QColor(0, 255, 0, 0)
+        self.mNoDataColor = QColor(0, 0, 0, 0)
 
         self.mParameters : list
         self.mParameters = []
@@ -939,7 +955,7 @@ class BitFlagRendererWidget(QgsRasterRendererWidget, loadFormClass(PATH_UI)):
 
         self.mTreeView.selectionModel().selectionChanged.connect(self.onSelectionChanged)
         self.mTreeView.doubleClicked.connect(self.onTreeViewDoubleClick)
-        self.mTreeView.header().setSectionResizeMode(QHeaderView.ResizeToContents)
+        self.mTreeView.header().setSectionResizeMode(QHeaderView.Interactive)
 
         state = settings().value(SettingsKeys.TreeViewState.value, None)
         if isinstance(state, QByteArray):
