@@ -23,7 +23,7 @@ AUTHOR = 'Benjamin Jakimow'
 MAIL = 'benjamin.jakimow@geo.hu-berlin.de'
 
 LICENSE = 'GNU GPL-3'
-DESCRIPTION = 'Visualization of bit flags in quality images.'
+DESCRIPTION = 'Visualization of quality image bit flags.'
 URL_HOMEPAGE = 'https://bitbucket.org/jakimowb/bit-flag-renderer'
 URL_DOCUMENTATION = 'https://bit-flag-renderer.readthedocs.io/en/latest/'
 URL_REPOSITORY = 'https://bitbucket.org/jakimowb/bit-flag-renderer'
