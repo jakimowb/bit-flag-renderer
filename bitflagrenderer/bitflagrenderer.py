@@ -46,6 +46,8 @@ def settings()->QSettings:
 class SettingsKeys(enum.Enum):
 
     TreeViewState = 'tree_view_state'
+    TreeViewSortColumn = 'tree_view_sort_column'
+    TreeViewSortOrder = 'tree_view_sort_order'
     BitFlagSchemes = 'bit_flag_schemes'
 
 FACTORY = None
@@ -802,6 +804,9 @@ class BitFlagModel(QAbstractItemModel):
             if role == Qt.UserRole:
                 return item
 
+            if role == Qt.InitialSortOrderRole and index.column() == 0:
+                return Qt.DescendingOrder
+
         if isinstance(item, BitFlagState):
 
             if role in [Qt.DisplayRole, Qt.EditRole]:
@@ -930,6 +935,32 @@ class BitFlagModel(QAbstractItemModel):
         self.endRemoveRows()
 
 
+class BitFlagSortFilterProxyModel(QSortFilterProxyModel):
+
+    def __init__(self, *args, **kwds):
+        super(BitFlagSortFilterProxyModel, self).__init__(*args, *kwds)
+
+    def lessThan(self, left: QModelIndex, right: QModelIndex) -> bool:
+        """
+        Ensures correct sorting with values like 1, '1', '1-2', 10
+        :param left:
+        :type left:
+        :param right:
+        :type right:
+        :return:
+        :rtype:
+        """
+        if isinstance(left.internalPointer(), BitFlagParameter) and isinstance(right.internalPointer(), BitFlagParameter) \
+                and left.column() == 0 and right.column() == 0:
+            b1 = left.internalPointer().firstBit()
+            b2 = right.internalPointer().firstBit()
+
+            if b1 != b2:
+                return b1 < b2
+            else:
+                return left.data(Qt.DisplayRole) < right.data(Qt.DisplayRole)
+        else:
+            return super(BitFlagSortFilterProxyModel, self).lessThan(left, right)
 
 class BitFlagRendererWidget(QgsRasterRendererWidget, loadFormClass(PATH_UI)):
 
@@ -942,7 +973,7 @@ class BitFlagRendererWidget(QgsRasterRendererWidget, loadFormClass(PATH_UI)):
 
         self.mFlagModel:BitFlagModel
         self.mFlagModel = BitFlagModel()
-        self.mProxyModel = QSortFilterProxyModel()
+        self.mProxyModel = BitFlagSortFilterProxyModel()
         self.mProxyModel.setSourceModel(self.mFlagModel)
         self.mTreeView.setModel(self.mProxyModel)
 
@@ -958,8 +989,13 @@ class BitFlagRendererWidget(QgsRasterRendererWidget, loadFormClass(PATH_UI)):
         self.mTreeView.header().setSectionResizeMode(QHeaderView.Interactive)
 
         state = settings().value(SettingsKeys.TreeViewState.value, None)
+        sortColumn = settings().value(SettingsKeys.TreeViewSortColumn.value, 0)
+        sortOrder = settings().value(SettingsKeys.TreeViewSortColumn.value, Qt.AscendingOrder)
+
         if isinstance(state, QByteArray):
             self.mTreeView.setState(state)
+        self.mProxyModel.sort(sortColumn, sortOrder)
+
 
         self.mLastBitFlagSchemeName = 'Bit Flag scheme'
         self.mNoDataColor = QColor(0,0,0,0)
@@ -1023,6 +1059,8 @@ class BitFlagRendererWidget(QgsRasterRendererWidget, loadFormClass(PATH_UI)):
 
     def saveTreeViewState(self):
         settings().setValue(SettingsKeys.TreeViewState.value, self.treeView().state())
+        settings().setValue(SettingsKeys.TreeViewSortColumn.value, self.mProxyModel.sortColumn())
+        settings().setValue(SettingsKeys.TreeViewSortOrder.value, self.mProxyModel.sortOrder())
 
     def onTreeViewDoubleClick(self, idx):
         idx = self.mProxyModel.mapToSource(idx)

@@ -21,7 +21,7 @@ from qps.utils import file_search
 from bitflagrenderer.bitflagrenderer import *
 
 QAPP = initQgisApplication()
-SHOW_GUI = False and os.environ.get('CI') is None
+SHOW_GUI = True and os.environ.get('CI') is None
 
 
 from bitflagrenderer import DIR_EXAMPLE_DATA, DIR_REPO
