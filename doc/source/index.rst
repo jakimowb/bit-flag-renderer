@@ -1,23 +1,28 @@
-.. Flag Raster Renderer documentation master file, created by
-   sphinx-quickstart on Tue Dec 17 17:22:25 2019.
-   You can adapt this file completely to your liking, but it should at least
-   contain the root `toctree` directive.
+.. Flag Raster Renderer documentation master file
 
 Bit Flag Renderer
 =================
 
-A QGIS Plugin to visualize bit flags in raster images.
+A QGIS Plugin to visualize bit flags in raster quality images.
 
+
+
+Features
+--------
+
+* Renders single flags and combinations of neighbored flags in raster images
+* integrated to QGIS Layer Styling panel
 
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 3
    :caption: Contents:
 
-   usage.rst
-   about.rst
-   changelog.rst
+   How to use <usage.rst>
+   About <about.rst>
+   Changes <changelog.rst>
    License <LICENSE.md>
+
 
 .. table::
 
@@ -27,12 +32,10 @@ A QGIS Plugin to visualize bit flags in raster images.
    Issue tracker        https://bitbucket.org/jakimowb/bit-flag-renderer/issues
    ==================== ================================================================================================
 
-Features
---------
+License and Use
+---------------
 
-* Renders single flags and combinations of neighbored flags in raster images
-* integrated to QGIS Layer Styling panel
-
+This program is free software; you can redistribute it and/or modify it under the terms of the `GNU General Public License Version 3 (GNU GPL-3) <https://www.gnu.org/licenses/gpl-3.0.en.html>`_ , as published by the Free Software Foundation. See also :ref:`License`.
 
 
 Indices and tables

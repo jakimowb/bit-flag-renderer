@@ -125,11 +125,11 @@ class BitFlagRendererTests(unittest.TestCase):
         canvas.waitWhileRendering()
         canvas.setCanvasColor(QColor('grey'))
 
-
         w = BitFlagRendererWidget(lyr, lyr.extent())
 
+
         btnReAdd = QPushButton('Re-Add')
-        btnReAdd.clicked.connect(lambda : w.setRasterLayer(lyr))
+        btnReAdd.clicked.connect(lambda : w.setRasterLayer(w.rasterLayer()))
 
         def onWidgetChanged(w, lyr):
 

@@ -201,19 +201,18 @@ class AboutBitFlagRenderer(QDialog, loadFormClass(PATH_ABOUT_UI)):
         from bitflagrenderer import PATH_LICENSE, VERSION, PATH_CHANGELOG, PATH_ABOUT
         self.labelVersion.setText('{}'.format(VERSION))
 
-        def readTextFile(path):
-            if os.path.isfile(path):
-                f = open(path, encoding='utf-8')
-                txt = f.read()
-                f.close()
-            else:
-                txt = 'unable to read {}'.format(path)
-            return txt
+        def readTextFile(path:str):
+            with open(path, encoding='utf-8') as f:
+                return f.read()
+            return 'unable to read {}'.format(path)
 
         # page Changed
         self.tbAbout.setHtml(readTextFile(PATH_ABOUT))
-        self.tbChanges.setHtml(readTextFile(PATH_CHANGELOG.as_posix() + '.html'))
-        self.tbLicense.setHtml(readTextFile(os.path.splitext(PATH_LICENSE)[0] + '.html'))
+        #self.tbChanges.setHtml(readTextFile(PATH_CHANGELOG.as_posix() + '.html'))
+        #self.tbLicense.setHtml(readTextFile(os.path.splitext(PATH_LICENSE)[0] + '.html'))
+
+        self.tbChanges.setPlainText(readTextFile(PATH_CHANGELOG.as_posix()))
+        self.tbLicense.setPlainText(readTextFile(PATH_LICENSE.as_posix()))
 
     def setAboutTitle(self, suffix=None):
         item = self.listWidget.currentItem()
@@ -431,8 +430,8 @@ class BitFlagParameter(object):
         return self.mStartBit < other.mStartBit
 
     def __repr__(self)->str:
-        info = '{}:{}bits:"{}"'.format(self.mStartBit, self.mBitSize, self.mName)
-        return info
+        info = ': {}-{}, "{}"'.format(self.mStartBit, self.mBitSize, self.mName)
+        return super(BitFlagParameter, self).__repr__() + info
 
     def setBitSize(self, bitSize:int):
         assert isinstance(bitSize, int) and bitSize >= 1
@@ -979,26 +978,21 @@ class BitFlagRendererWidget(QgsRasterRendererWidget, loadFormClass(PATH_UI)):
 
         self.setRasterLayer(layer)
 
+        self.mFlagModel.rowsInserted.connect(self.adjustColumnSizes)
+        self.mFlagModel.rowsRemoved.connect(self.adjustColumnSizes)
         self.mFlagModel.dataChanged.connect(self.widgetChanged.emit)
         self.mFlagModel.rowsInserted.connect(self.widgetChanged.emit)
         self.mFlagModel.rowsRemoved.connect(self.widgetChanged.emit)
-        self.widgetChanged.connect(self.saveTreeViewState)
 
         self.mTreeView.selectionModel().selectionChanged.connect(self.onSelectionChanged)
         self.mTreeView.doubleClicked.connect(self.onTreeViewDoubleClick)
         self.mTreeView.header().setSectionResizeMode(QHeaderView.Interactive)
+        self.adjustColumnSizes()
 
-        state = settings().value(SettingsKeys.TreeViewState.value, None)
-        sortColumn = settings().value(SettingsKeys.TreeViewSortColumn.value, 0)
-        sortOrder = settings().value(SettingsKeys.TreeViewSortColumn.value, Qt.AscendingOrder)
-
-        if isinstance(state, QByteArray):
-            self.mTreeView.setState(state)
-        self.mProxyModel.sort(sortColumn, sortOrder)
-
+        self.restoreTreeViewState()
 
         self.mLastBitFlagSchemeName = 'Bit Flag scheme'
-        self.mNoDataColor = QColor(0,0,0,0)
+        self.mNoDataColor = QColor(0, 0, 0, 0)
 
         self.actionAddParameter.triggered.connect(self.onAddParameter)
         self.actionRemoveParameters.triggered.connect(self.onRemoveParameters)
@@ -1017,6 +1011,11 @@ class BitFlagRendererWidget(QgsRasterRendererWidget, loadFormClass(PATH_UI)):
         SaveFlagSchemeDialog.save(scheme)
 
 
+    def adjustColumnSizes(self, *args):
+
+        for i, c in enumerate(self.mFlagModel.columnNames()):
+            if c != self.mFlagModel.cnName:
+                self.mTreeView.resizeColumnToContents(i)
 
     def setBitFlagScheme(self, scheme:BitFlagScheme=None, name:str=None):
 
@@ -1047,6 +1046,7 @@ class BitFlagRendererWidget(QgsRasterRendererWidget, loadFormClass(PATH_UI)):
                     self.mTreeView.setExpanded(idxP, item.mIsExpanded)
 
             self.mTreeView.setUpdatesEnabled(True)
+            self.adjustColumnSizes()
 
         pass
 
@@ -1058,9 +1058,46 @@ class BitFlagRendererWidget(QgsRasterRendererWidget, loadFormClass(PATH_UI)):
         return scheme
 
     def saveTreeViewState(self):
-        settings().setValue(SettingsKeys.TreeViewState.value, self.treeView().state())
-        settings().setValue(SettingsKeys.TreeViewSortColumn.value, self.mProxyModel.sortColumn())
-        settings().setValue(SettingsKeys.TreeViewSortOrder.value, self.mProxyModel.sortOrder())
+
+        rows = self.mProxyModel.rowCount()
+        isExpanded = [self.treeView().isExpanded(self.mProxyModel.index(row, 0)) for row in range(rows)]
+        columnWidths = [self.treeView().columnWidth(i) for i in range(self.treeView().model().columnCount())]
+        state = {'state': self.treeView().state(),
+                 'sortColumn': self.mProxyModel.sortColumn(),
+                 'sortOrder': self.mProxyModel.sortOrder(),
+                 'expandedPositions': isExpanded,
+                 'columnWidths':columnWidths}
+
+        settings().setValue(SettingsKeys.TreeViewState.value, pickle.dumps(state))
+
+    def restoreTreeViewState(self):
+
+        dump = settings().value(SettingsKeys.TreeViewState.value, None)
+        if dump is not None:
+            tv = self.treeView()
+            #tv.blockSignals(True)
+            try:
+
+                d = pickle.loads(dump)
+                assert isinstance(d, dict)
+                self.treeView().setState(d['state'])
+                self.mProxyModel.sort(d['sortColumn'], d['sortOrder'])
+
+                expanded = d.get('expandedPositions', [])
+                columnWidths = d.get('columnWidths', [])
+
+
+                for row in range(min(len(expanded), self.mProxyModel.rowCount())):
+                    idx = self.mProxyModel.index(row, 0)
+                    tv.setExpanded(idx, expanded[row])
+
+                for col in range(min(len(columnWidths), self.mProxyModel.columnCount())):
+                    tv.setColumnWidth(col, columnWidths[col])
+
+            except Exception as ex:
+                s = ""
+
+            #tv.blockSignals(False)
 
     def onTreeViewDoubleClick(self, idx):
         idx = self.mProxyModel.mapToSource(idx)
@@ -1075,10 +1112,21 @@ class BitFlagRendererWidget(QgsRasterRendererWidget, loadFormClass(PATH_UI)):
     def setRasterLayer(self, layer:QgsRasterLayer):
         super(BitFlagRendererWidget, self).setRasterLayer(layer)
         self.mRasterBandComboBox.setLayer(layer)
+        if isinstance(layer, QgsRasterLayer):
+            dt = layer.dataProvider().dataType(self.mRasterBandComboBox.currentBand())
+            dtName = gdal.GetDataTypeName(dt)
+            dtSize = gdal.GetDataTypeSize(dt)
+            self.mRasterBandComboBox.setToolTip('{} bits ({}) '.format(dtSize, dtName))
+            if layer.isValid() and isinstance(layer.renderer(), BitFlagRenderer):
+                self.setBitFlagScheme(layer.renderer().bitFlagScheme())
+                self.restoreTreeViewState()
 
-        if layer.isValid() and isinstance(layer.renderer(), BitFlagRenderer):
+        else:
+            self.clear()
 
-            self.setBitFlagScheme(layer.renderer().bitFlagScheme())
+    def rasterLayer(self):
+        self.saveTreeViewState()
+        return super(BitFlagRendererWidget, self).rasterLayer()
 
     def onSelectionChanged(self, selected, deselected):
         self.updateWidgets()
@@ -1106,6 +1154,8 @@ class BitFlagRendererWidget(QgsRasterRendererWidget, loadFormClass(PATH_UI)):
 
 
     def renderer(self)->QgsRasterRenderer:
+
+        self.saveTreeViewState()
 
         r = BitFlagRenderer()
         r.setInput(self.rasterLayer().dataProvider())
@@ -1153,16 +1203,6 @@ class BitFlagRendererWidget(QgsRasterRendererWidget, loadFormClass(PATH_UI)):
         else:
             return 0
 
-    def setLayer(self, rasterLayer:QgsRasterLayer):
-        if isinstance(rasterLayer, QgsRasterLayer):
-            self.mRasterBandComboBox.setLayer(rasterLayer)
-            dt = rasterLayer.dataProvider().dataType(self.mRasterBandComboBox.currentBand())
-            dtName = gdal.GetDataTypeName(dt)
-            dtSize = gdal.GetDataTypeSize(dt)
-            self.mRasterBandComboBox.setToolTip('{} bits ({}) '.format(dtSize, dtName))
-        else:
-            self.clear()
-
     def clear(self):
         self.mRasterBandComboBox.setLayer(None)
         self.mRasterBandComboBox.setToolTip('')
@@ -1190,14 +1230,14 @@ class SaveFlagSchemeDialog(QDialog, loadFormClass(PATH_UI_SAVE_FLAG_SCHEMA)):
         self.wSchemeFilePath.setStorageMode(QgsFileWidget.SaveFile)
         filter = 'XML files (*.xml);;Any files (*)'
         self.wSchemeFilePath.setFilter(filter)
-        root = DIR_BITFLAG_SCHEMES.as_posix()
-        self.wSchemeFilePath.setDefaultRoot(root)
+        root = DIR_BITFLAG_SCHEMES
+        self.wSchemeFilePath.setDefaultRoot(root.as_posix())
         self.tbSchemaName.setText(schema.name())
 
         filePath = schema.name().encode().decode('ascii', 'replace').replace(u'\ufffd', '_')
         filePath = re.sub(r'[ ]', '_', filePath)+'.xml'
-        filePath = os.path.join(root, filePath)
-        self.wSchemeFilePath.setFilePath(filePath)
+        filePath = root / filePath
+        self.wSchemeFilePath.setFilePath(filePath.as_posix())
 
     def schemaName(self)->str:
         return self.tbSchemaName.text()
@@ -1206,12 +1246,19 @@ class SaveFlagSchemeDialog(QDialog, loadFormClass(PATH_UI_SAVE_FLAG_SCHEMA)):
         return self.mSchema
 
     def filePath(self)->str:
-        return self.wSchemeFilePath.filePath()
+        """
+        :return:
+        :rtype:
+        """
+        return pathlib.Path(self.wSchemeFilePath.filePath()).as_posix()
 
 class BitFlagRenderer(QgsSingleBandGrayRenderer):
-    """ A raster renderer to show flag states of a single band.
-        Inherits from QgsSingleBandGrayRenderer to function with QGIS Core widgets
     """
+    A raster renderer to show flag states of a single byte/int/uint bands.
+    Inherits from QgsSingleBandGrayRenderer to function with QGIS Core widgets that cannot handle new rasterrenderer
+    that inherit QgsRasterRenderer directyl
+    """
+
 
     def __init__(self, input=None):
         super(BitFlagRenderer, self).__init__(input, 1)

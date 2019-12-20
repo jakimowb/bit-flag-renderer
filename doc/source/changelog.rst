@@ -1,3 +1,13 @@
+Changelog
+=========
+
+Version 0.2
+-----------
+
+ - tree view recalls expansion state of flag parameter nodes
+ - fixed saving of Flag Schemes
+ - cleaned code, removed a PPT from docs (issue `#1 <https://bitbucket.org/jakimowb/eo-time-series-viewer/issues/1>`_)
+
 Version 0.1
 -----------
 

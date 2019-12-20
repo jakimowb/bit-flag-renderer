@@ -5,11 +5,9 @@
 .. |workflow| image:: img/usage.png
 
 
-============
 How to Use
-============
+==========
 
-To visualize selected bit flags of a byte/integer raster layer that is already opened in QGIS, open the Layer Styling Panel and:
 
 
 .. figure:: img//usage.png
@@ -17,10 +15,15 @@ To visualize selected bit flags of a byte/integer raster layer that is already o
 
    Clouds and shadows according to the Landsat quality assessment (QA) flag layer, visualized with the Bit Flag Renderer panel
 
-1. Select the Bit Flag Renderer panel
-2. Add the number of Bit Flag parameter you like to show
+To visualize bit flags of a byte/integer raster layer, select this layer in the QGIS raster layer tree and
+open the QGIS Layer Styling Panel. Then:
 
-3. Define for each parameter the bit positions and number of different states it is defined for, e.g.
+1. Select the Bit Flag Renderer sub panel
+
+2. Add the number of Bit Flag parameter that you like to show or open load a pre-defined scheme of bit flags
+
+3. Specify for each parameter (double click) the first bit position and the total number of bit the parameter is using. The total number of bits
+   controls the number of possible states a parameter can have per pixel, e.g.
 
     - '0' for the first bit = 2 flag states
     - '1' for the second bit = 2 flag states

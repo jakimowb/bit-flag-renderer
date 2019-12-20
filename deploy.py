@@ -30,7 +30,7 @@ PATH_CFG = DIR_REPO / 'pb_tool.cfg'
 PATH_METADATA = DIR_REPO / 'metadata.txt'
 
 
-QGIS_MIN = '3.4'
+QGIS_MIN = '3.8'
 QGIS_MAX = '3.99'
 
 REPO = git.Repo(DIR_REPO)
@@ -122,7 +122,7 @@ class QGISMetadataFileWriter(object):
             lines.append('experimental={}'.format(self.mIsExperimental))
 
 
-        #lines.append('deprecated={}'.format(self.mIsDeprecated))
+        # lines.append('deprecated={}'.format(self.mIsDeprecated))
         lines.append('')
         lines.append('changelog={}'.format(self.mChangelog))
 
@@ -240,16 +240,16 @@ def build():
     MD.mName = bitflagrenderer.TITLE
 
     with open(PATH_CHANGELOG, 'r', encoding='utf-8') as f:
-        changelog = f.readlines()
-        changelog = ''.join(changelog[4:])
+        changelog = f.readlines()[2:]
+        changelog = '   '.join(changelog)
 
-    MD.mChangelog = changelog
+    MD.mChangelog = '\n   ' + changelog.strip()
     MD.mCategory = 'Raster'
     MD.mAbout = aboutText
     MD.mDescription = bitflagrenderer.DESCRIPTION
     MD.mVersion = buildID
     MD.mTracker = bitflagrenderer.URL_ISSUE_TRACKER
-    MD.mHomepage = bitflagrenderer.URL_HOMEPAGE
+    MD.mHomepage = bitflagrenderer.URL_DOCUMENTATION
     MD.mRepository = bitflagrenderer.URL_REPOSITORY
     MD.mQgisMinimumVersion = QGIS_MIN
     MD.mQgisMaximumVersion = QGIS_MAX
