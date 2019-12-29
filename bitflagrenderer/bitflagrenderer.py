@@ -593,9 +593,16 @@ class BitFlagScheme(object):
 
         return scheme
 
-
-
-
+    def visibleStates(self)->typing.List[BitFlagState]:
+        """
+        Returns all visible BitFlagStates
+        :return: list
+        :rtype:
+        """
+        visible = []
+        for p in self:
+            visible.extend(p.visibleStates())
+        return visible
 
     def noDataColor(self)->QColor:
         return self.mNoDataColor

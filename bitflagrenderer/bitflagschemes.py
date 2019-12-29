@@ -92,11 +92,32 @@ def FORCE_QAI()->BitFlagScheme:
     p1[2].setName('confident, opaque cloud')
     p1[3].setName('cirrus')
 
-    p2 = BitFlagParameter('Cloud shadow', 2, 1)
+    p2 = BitFlagParameter('Cloud shadow', 3, 1)
 
-    p3 = BitFlagParameter('Snow', 3, 1)
+    p3 = BitFlagParameter('Snow', 4, 1)
 
+    p4 = BitFlagParameter('Water', 5, 1)
 
-    scheme.mParameters.extend([p0, p1, p2, p3])
+    p5 = BitFlagParameter('Aerosol', 6, 2)
+    p5[0].setName('estimated')
+    p5[1].setName('interpolated')
+    p5[2].setName('high')
+    p5[3].setName('fill')
+
+    p6 = BitFlagParameter('Subzero', 8)
+    p7 = BitFlagParameter('Saturation', 9)
+    p8 = BitFlagParameter('High sun zenith', 10)
+    p9 = BitFlagParameter('Illumination', 11, 2)
+    p9[0].setName('good')
+    p9[1].setName('low')
+    p9[2].setName('poor')
+    p9[3].setName('shadow')
+
+    p10 = BitFlagParameter('Slope', 13)
+    p11 = BitFlagParameter('Water vapor', 14)
+    p11[0].setName('measured')
+    p11[1].setName('fill')
+
+    scheme.mParameters.extend([p0, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11])
     return scheme
 
