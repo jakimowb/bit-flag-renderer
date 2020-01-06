@@ -79,7 +79,7 @@ def LandsatMSS_QA()->BitFlagScheme:
 
 
 def FORCE_QAI()->BitFlagScheme:
-
+    # use color scheme of FORCE OVV overview images
     scheme = BitFlagScheme('FORCE Quality Assurance Information')
 
     p0 = BitFlagParameter('Valid data', 0)
@@ -88,15 +88,18 @@ def FORCE_QAI()->BitFlagScheme:
 
     p1 = BitFlagParameter('Cloud state', 1, 2)
     p1[0].setName('clear')
-    p1[1].setName('less confident cloud')
-    p1[2].setName('confident, opaque cloud')
-    p1[3].setName('cirrus')
+    p1[1].setValues('less confident cloud', color=QColor(255, 0, 255), isVisible=True)
+    p1[2].setValues('confident, opaque cloud', color=QColor(255, 0, 255), isVisible=True)
+    p1[3].setValues('cirrus', color=QColor(255, 0, 0), isVisible=True)
 
     p2 = BitFlagParameter('Cloud shadow', 3, 1)
+    p2[1].setValues(color=QColor(0, 255, 255), isVisible=True)
 
     p3 = BitFlagParameter('Snow', 4, 1)
+    p3[1].setValues(color=QColor(255, 255, 0), isVisible=True)
 
     p4 = BitFlagParameter('Water', 5, 1)
+    p4[1].setValues(color=QColor(0, 0, 255), isVisible=False)
 
     p5 = BitFlagParameter('Aerosol', 6, 2)
     p5[0].setName('estimated')
@@ -105,9 +108,15 @@ def FORCE_QAI()->BitFlagScheme:
     p5[3].setName('fill')
 
     p6 = BitFlagParameter('Subzero', 8)
+    p6[1].setValues(color=QColor(34, 177, 76), isVisible=True)
+
     p7 = BitFlagParameter('Saturation', 9)
+    p7[1].setValues(color=QColor(255, 127, 39), isVisible=True)
+
     p8 = BitFlagParameter('High sun zenith', 10)
+
     p9 = BitFlagParameter('Illumination', 11, 2)
+
     p9[0].setName('good')
     p9[1].setName('low')
     p9[2].setName('poor')

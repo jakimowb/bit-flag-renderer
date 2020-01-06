@@ -16,7 +16,7 @@
 
 import pathlib, os
 
-VERSION = '0.2'
+VERSION = '0.3'
 __version__ = '<dummy>'
 TITLE = 'Bit Flag Renderer'
 AUTHOR = 'Benjamin Jakimow'

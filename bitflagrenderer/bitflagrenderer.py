@@ -1054,8 +1054,8 @@ class BitFlagRendererWidget(QgsRasterRendererWidget, loadFormClass(PATH_UI)):
 
             self.mTreeView.setUpdatesEnabled(True)
             self.adjustColumnSizes()
+            self.widgetChanged.emit()
 
-        pass
 
     def bitFlagScheme(self)->BitFlagScheme:
 

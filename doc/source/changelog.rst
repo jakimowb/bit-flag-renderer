@@ -1,6 +1,13 @@
 Changelog
 =========
 
+Version 0.3
+-----------
+
+- loading a bit flag scheme updates the raster layer renderer
+- reversed bit rendering order. least significant bit is rendered last, e.g. a "top layer"
+- fixed FORCE bit flag scheme and uses FORCE overview image (OVV) colors by default
+
 Version 0.2
 -----------
 
