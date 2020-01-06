@@ -1379,7 +1379,7 @@ class BitFlagRenderer(QgsSingleBandGrayRenderer):
         #block_data[b, :] = band_data
 
         parameterNumbers = np.zeros(band_data.shape, dtype=np.uint8)
-        for i, flagParameter in enumerate(self.bitFlagScheme()):
+        for i, flagParameter in enumerate(reversed(self.bitFlagScheme())):
             b0 = flagParameter.firstBit()
 
             # extract the parameter number
