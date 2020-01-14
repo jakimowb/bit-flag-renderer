@@ -14,13 +14,19 @@
 ***************************************************************************/
 """
 
-import unittest
+import unittest, pathlib, sys, os, re
 
 from qps.testing import initQgisApplication
+#from qgis.testing import start_app
+#QAPP = start_app()
+#QAPP.setPkgDataPath(re.sub(r'/\.$', '/Library', QAPP.pkgDataPath()))
+
 from qps.utils import file_search
 from bitflagrenderer.bitflagrenderer import *
 
-QAPP = initQgisApplication()
+#QAPP = initQgisApplication()
+
+
 SHOW_GUI = True and os.environ.get('CI') is None
 
 
