@@ -20,14 +20,14 @@ from qps.testing import initQgisApplication
 #from qgis.testing import start_app
 #QAPP = start_app()
 #QAPP.setPkgDataPath(re.sub(r'/\.$', '/Library', QAPP.pkgDataPath()))
-
+QAPP = initQgisApplication()
 from qps.utils import file_search
 from bitflagrenderer.bitflagrenderer import *
 
-#QAPP = initQgisApplication()
 
 
-SHOW_GUI = True and os.environ.get('CI') is None
+
+SHOW_GUI = False and os.environ.get('CI') is None
 
 
 from bitflagrenderer import DIR_EXAMPLE_DATA, DIR_REPO
