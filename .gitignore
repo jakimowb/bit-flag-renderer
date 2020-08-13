@@ -3,7 +3,6 @@
 deploy/
 build/
 tmp/
-bitflagschemes/*.*
 doc/build/
 .idea/*
 .idea/*.*

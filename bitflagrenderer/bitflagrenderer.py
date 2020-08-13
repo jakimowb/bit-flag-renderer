@@ -324,7 +324,7 @@ class BitFlagState(object):
 
         name = element.attribute('name')
         bitNumber = int(element.attribute('number'))
-        visible = bool(element.attribute('visible'))
+        visible = bool(element.attribute('visible').lower() in ['true', '1'])
         color = QColor(element.attribute('color'))
         state = BitFlagState(0, bitNumber, name=name, color=color, isVisible=visible)
         return state
@@ -591,7 +591,8 @@ class BitFlagScheme(object):
         schemes = [bfs.Landsat8_QA(),
                    bfs.LandsatTM_QA(),
                    bfs.LandsatMSS_QA(),
-                   bfs.FORCE_QAI()]
+                   #bfs.FORCE_QAI()
+                   ]
         for s in schemes:
             SCHEMES[s.name()] = s
 
@@ -813,7 +814,7 @@ class BitFlagModel(QAbstractItemModel):
         if isinstance(index.internalPointer(), (BitFlagParameter, BitFlagState)) and index.column() == 0:
             flags = flags | Qt.ItemIsUserCheckable
 
-        if cName in [self.cnName, self.cnColor]:
+        if cName == self.cnName:
             flags = flags | Qt.ItemIsEditable
 
         if cName == self.cnBitPosition and isinstance(index.internalPointer(), BitFlagParameter):
@@ -969,7 +970,7 @@ class BitFlagModel(QAbstractItemModel):
                 if value in [Qt.Checked, Qt.Unchecked]:
                     # apply new checkstate downwards to all FlagStates
                     for row in range(len(item)):
-                        if row == 0: # row 0 = empty flag -> consider higher values only
+                        if row == 0:  # row 0 = empty flag -> consider higher values only
                             continue
                         stateIndex = self.index(row, 0, index)
                         if self.data(stateIndex, Qt.CheckStateRole) != value:
@@ -1052,10 +1053,12 @@ class BitFlagSortFilterProxyModel(QSortFilterProxyModel):
         else:
             return super(BitFlagSortFilterProxyModel, self).lessThan(left, right)
 
+
 class BitFlagRendererTreeView(QTreeView):
 
     def __init__(self, *args, **kwds):
         super().__init__(*args, **kwds)
+        self.doubleClicked.connect(self.onDoubleClick)
 
     def contextMenu(self, event: QContextMenuEvent) -> QMenu:
         """
@@ -1065,11 +1068,17 @@ class BitFlagRendererTreeView(QTreeView):
 
         model = self.model()
 
+        cname = self.model().headerData(cidx.column(), Qt.Horizontal)
+        flagModel: BitFlagModel = self.model().sourceModel()
         m = QMenu()
 
         if bool(self.model().flags(cidx) & Qt.ItemIsEditable):
             a = m.addAction('Edit')
             a.triggered.connect(lambda *args, idx=cidx: self.edit(idx))
+
+        if cname == flagModel.cnColor and isinstance(cidx.data(role=Qt.UserRole), BitFlagState):
+            a = m.addAction('Set Color')
+            a.triggered.connect(lambda *args, idx=cidx: self.showColorDialog(idx))
 
         return m
 
@@ -1079,6 +1088,23 @@ class BitFlagRendererTreeView(QTreeView):
         """
         m = self.contextMenu(event)
         m.exec_(event.globalPos())
+
+    def onDoubleClick(self, idx: QModelIndex) -> None:
+        cname = self.model().headerData(idx.column(), Qt.Horizontal)
+        flagModel: BitFlagModel = self.model().sourceModel()
+        if cname == flagModel.cnColor:
+            self.showColorDialog(idx)
+        # other actions handled by base-class
+
+    def showColorDialog(self, idx: QModelIndex):
+        item = idx.data(role=Qt.UserRole)
+        if isinstance(item, BitFlagState):
+            c = QgsColorDialog.getColor(item.color(), self, \
+                                        'Set color for "{}"'.format(item.name()))
+
+            if c.isValid():
+                self.model().setData(idx, c, role=Qt.EditRole)
+
 
 class BitFlagRendererWidget(QgsRasterRendererWidget):
 
@@ -1104,7 +1130,7 @@ class BitFlagRendererWidget(QgsRasterRendererWidget):
         self.mFlagModel.rowsRemoved.connect(self.widgetChanged.emit)
 
         self.mTreeView.selectionModel().selectionChanged.connect(self.onSelectionChanged)
-        self.mTreeView.doubleClicked.connect(self.onTreeViewDoubleClick)
+
         self.mTreeView.header().setSectionResizeMode(QHeaderView.Interactive)
         self.adjustColumnSizes()
 
@@ -1214,16 +1240,6 @@ class BitFlagRendererWidget(QgsRasterRendererWidget):
                 s = ""
 
             # tv.blockSignals(False)
-
-    def onTreeViewDoubleClick(self, idx):
-        idx = self.mProxyModel.mapToSource(idx)
-        item = idx.internalPointer()
-        cname = self.mFlagModel.columnNames()[idx.column()]
-        if isinstance(item, BitFlagState) and cname == self.mFlagModel.cnColor:
-            c = QgsColorDialog.getColor(item.color(), self.treeView(), \
-                                        'Set color for "{}"'.format(item.name()))
-
-            self.mFlagModel.setData(idx, c, role=Qt.EditRole)
 
     def setRasterLayer(self, layer: QgsRasterLayer):
         super(BitFlagRendererWidget, self).setRasterLayer(layer)

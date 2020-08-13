@@ -19,7 +19,7 @@ from qgis.PyQt.QtGui import QColor
 from bitflagrenderer.bitflagrenderer import BitFlagScheme, BitFlagParameter, BitFlagState
 
 
-def Landsat8_QA()->BitFlagScheme:
+def Landsat8_QA() -> BitFlagScheme:
     # see https://www.usgs.gov/land-resources/nli/landsat/landsat-collection-1-level-1-quality-assessment-band?qt-science_support_page_related_con=0#qt-science_support_page_related_con
     scheme = BitFlagScheme('Landsat 8 Collection 1 QA band bits')
 
@@ -64,21 +64,21 @@ def Landsat8_QA()->BitFlagScheme:
     return scheme
 
 
-def LandsatTM_QA()->BitFlagScheme:
-
+def LandsatTM_QA() -> BitFlagScheme:
     scheme = Landsat8_QA()
     scheme.mName = 'Landsat 4-5 Collection 1 QA band bits'
     del scheme.mParameters[7:]
     return scheme
 
-def LandsatMSS_QA()->BitFlagScheme:
+
+def LandsatMSS_QA() -> BitFlagScheme:
     scheme = Landsat8_QA()
     scheme.mName = 'Landsat 1-5 MSS Collection 1 QA band bits'
     del scheme.mParameters[5:]
     return scheme
 
 
-def FORCE_QAI()->BitFlagScheme:
+def DEPR_FORCE_QAI() -> BitFlagScheme:
     # use color scheme of FORCE OVV overview images
     scheme = BitFlagScheme('FORCE Quality Assurance Information')
 
@@ -129,4 +129,3 @@ def FORCE_QAI()->BitFlagScheme:
 
     scheme.mParameters.extend([p0, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11])
     return scheme
-
