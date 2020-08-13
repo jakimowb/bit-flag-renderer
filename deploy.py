@@ -14,14 +14,19 @@
 ***************************************************************************/
 """
 
-import os, sys, pathlib, re, datetime, shutil
-from pb_tool import pb_tool
-import git
-from qps.utils import file_search, zipdir
-from qps.make.make import compileResourceFile
+import datetime
+import os
+import re
+import shutil
 from os.path import join as jp
+
+import git
 from docutils.core import publish_string
-from bitflagrenderer import DIR_REPO, PATH_ABOUT, PATH_CHANGELOG, VERSION, PATH_LICENSE, URL_ISSUE_TRACKER, DIR_ICONS
+from pb_tool import pb_tool
+from qps.make.make import compileResourceFile
+from qps.utils import file_search, zipdir
+
+from bitflagrenderer import DIR_REPO, PATH_ABOUT, PATH_CHANGELOG, VERSION, PATH_LICENSE, URL_ISSUE_TRACKER
 
 DIR_BUILD = DIR_REPO / 'build'
 DIR_DOC_SOURCE = DIR_REPO / 'doc' / 'source'

@@ -16,16 +16,21 @@
 
 import sys, os, re, pathlib, pickle, typing, enum, copy, bisect, io, json, enum, collections
 from qgis.core import *
+from qgis.core import QgsRasterLayer, QgsRasterRenderer, QgsRasterTransparency, Qgis, \
+    QgsRectangle, QgsSingleBandGrayRenderer, QgsRasterBlock, QgsRasterBlockFeedback
 from qgis.gui import *
+from qgis.gui import QgsMapLayerConfigWidget, QgsMapCanvas, QgsRasterRendererWidget, \
+    QgsMapLayerConfigWidgetFactory, QgsColorDialog, QgsFileWidget, QgisInterface
 import qgis.utils
 from qgis.PyQt.QtCore import *
 from qgis.PyQt.QtWidgets import *
 from qgis.PyQt.QtGui import *
 from qgis.PyQt.QtXml import *
-from qgis.PyQt.uic import loadUiType
+from qgis.PyQt import uic
 from osgeo import gdal
 import numpy as np
 from bitflagrenderer import DIR_BITFLAG_SCHEMES, DIR_EXAMPLE_DATA
+
 PATH_UI = os.path.join(os.path.dirname(__file__), 'bitflagrenderer.ui')
 PATH_ABOUT_UI = os.path.join(os.path.dirname(__file__), 'aboutdialog.ui')
 PATH_ICON = os.path.join(os.path.dirname(__file__), *['icons', 'bitflagimage.png'])
@@ -34,7 +39,28 @@ assert os.path.isfile(PATH_ICON)
 
 TYPE = 'BitFlagRenderer'
 
-def settings()->QSettings:
+# dictionary to store form classes and avoid multiple calls to read <myui>.ui
+QGIS_RESOURCE_WARNINGS = set()
+
+
+def qgisAppQgisInterface() -> QgisInterface:
+    """
+    Returns the QgisInterface of the QgisApp in case everything was started from within the QGIS Main Application
+    :return: QgisInterface | None in case the qgis.utils.iface points to another QgisInterface (e.g. the EnMAP-Box itself)
+    """
+    try:
+        import qgis.utils
+        if not isinstance(qgis.utils.iface, QgisInterface):
+            return None
+        mainWindow = qgis.utils.iface.mainWindow()
+        if not isinstance(mainWindow, QMainWindow) or mainWindow.objectName() != 'QgisApp':
+            return None
+        return qgis.utils.iface
+    except:
+        return None
+
+
+def settings() -> QSettings:
     """
     Returns the Bit Flag Renderer settings.
     :return: QSettings
@@ -43,15 +69,15 @@ def settings()->QSettings:
 
     return settings
 
-class SettingsKeys(enum.Enum):
 
+class SettingsKeys(enum.Enum):
     TreeViewState = 'tree_view_state'
     TreeViewSortColumn = 'tree_view_sort_column'
     TreeViewSortOrder = 'tree_view_sort_order'
     BitFlagSchemes = 'bit_flag_schemes'
 
-FACTORY = None
 
+FACTORY = None
 
 QGIS2NUMPY_DATA_TYPES = {Qgis.Byte: np.byte,
                          Qgis.UInt16: np.uint16,
@@ -70,24 +96,86 @@ MAX_BITS_PER_PARAMETER = 4
 NEXT_COLOR_HUE_DELTA_CON = 10
 NEXT_COLOR_HUE_DELTA_CAT = 100
 
+REMOVE_setShortcutVisibleInContextMenu = hasattr(QAction, 'setShortcutVisibleInContextMenu')
 
-def loadFormClass(pathUi: str):
+
+def loadUi(uifile, baseinstance=None, package='', resource_suffix='_rc', remove_resource_references=True,
+           loadUiType=False):
     """
-    Loads Qt UI files (*.ui) while taking care on QgsCustomWidgets.
-    Uses PyQt4.uic.loadUiType (see http://pyqt.sourceforge.net/Docs/PyQt4/designer.html#the-uic-module)
+    :param uifile:
+    :type uifile:
+    :param baseinstance:
+    :type baseinstance:
+    :param package:
+    :type package:
+    :param resource_suffix:
+    :type resource_suffix:
+    :param remove_resource_references:
+    :type remove_resource_references:
+    :return:
+    :rtype:
     """
-    REMOVE_setShortcutVisibleInContextMenu = True
 
-    assert os.path.isfile(pathUi), '*.ui file does not exist: {}'.format(pathUi)
+    assert os.path.isfile(uifile), '*.ui file does not exist: {}'.format(uifile)
 
-    with open(pathUi, 'r', encoding='utf-8') as f:
+    with open(uifile, 'r', encoding='utf-8') as f:
         txt = f.read()
+
+    dirUi = os.path.dirname(uifile)
+
+    locations = []
+
+    for m in re.findall(r'(<include location="(.*\.qrc)"/>)', txt):
+        locations.append(m)
+
+    missing = []
+    for t in locations:
+        line, path = t
+        if not os.path.isabs(path):
+            p = os.path.join(dirUi, path)
+        else:
+            p = path
+
+        if not os.path.isfile(p):
+            missing.append(t)
+
+    match = re.search(r'resource="[^:].*/QGIS[^/"]*/images/images.qrc"', txt)
+    if match:
+        txt = txt.replace(match.group(), 'resource=":/images/images.qrc"')
+
+    if len(missing) > 0:
+
+        missingQrc = []
+        missingQgs = []
+
+        for t in missing:
+            line, path = t
+            if re.search(r'.*(?i:qgis)/images/images\.qrc.*', line):
+                missingQgs.append(m)
+            else:
+                missingQrc.append(m)
+
+        if len(missingQrc) > 0:
+            print('{}\nrefers to {} none-existing resource (*.qrc) file(s):'.format(uifile, len(missingQrc)))
+            for i, t in enumerate(missingQrc):
+                line, path = t
+                print('{}: "{}"'.format(i + 1, path), file=sys.stderr)
+
+        if len(missingQgs) > 0 and not isinstance(qgisAppQgisInterface(), QgisInterface):
+            missingFiles = [p[1] for p in missingQrc if p[1] not in QGIS_RESOURCE_WARNINGS]
+
+            if len(missingFiles) > 0:
+                print('{}\nrefers to {} none-existing resource (*.qrc) file(s) '.format(uifile, len(missingFiles)))
+                for i, path in enumerate(missingFiles):
+                    print('{}: "{}"'.format(i + 1, path))
+                    QGIS_RESOURCE_WARNINGS.add(path)
+                print('These files are likely available in a QGIS Desktop session. Further warnings will be skipped')
+
     doc = QDomDocument()
     doc.setContent(txt)
 
-    toRemove = []
     if REMOVE_setShortcutVisibleInContextMenu and 'shortcutVisibleInContextMenu' in txt:
-
+        toRemove = []
         actions = doc.elementsByTagName('action')
         for iAction in range(actions.count()):
             properties = actions.item(iAction).toElement().elementsByTagName('property')
@@ -95,6 +183,9 @@ def loadFormClass(pathUi: str):
                 prop = properties.item(iProperty).toElement()
                 if prop.attribute('name') == 'shortcutVisibleInContextMenu':
                     toRemove.append(prop)
+        for prop in toRemove:
+            prop.parentNode().removeChild(prop)
+        del toRemove
 
     elem = doc.elementsByTagName('customwidget')
     for child in [elem.item(i) for i in range(elem.count())]:
@@ -106,46 +197,43 @@ def loadFormClass(pathUi: str):
 
         sClass = str(cClass.nodeValue())
         sExtends = str(cHeader.nodeValue())
+        if False:
+            if sClass.startswith('Qgs'):
+                cHeader.setNodeValue('qgis.gui')
+        if True:
+            # replace 'qps' package location with local absolute position
+            if sExtends.startswith('qps.'):
+                cHeader.setNodeValue(re.sub(r'^qps\.', qps.__spec__.name + '.', sExtends))
 
-        if sClass.startswith('Qgs'):
-            cHeader.setNodeValue('qgis.gui')
+    if remove_resource_references:
+        # remove resource file locations to avoid import errors.
+        elems = doc.elementsByTagName('include')
+        for i in range(elems.count()):
+            node = elems.item(i).toElement()
+            attribute = node.attribute('location')
+            if len(attribute) > 0 and attribute.endswith('.qrc'):
+                node.parentNode().removeChild(node)
 
-    # remove resource file locations
-    includes = doc.elementsByTagName('include')
-    for i in range(includes.count()):
-        node = includes.item(i).toElement()
-        toRemove.append(node)
-    # collect resource file locations
-    tmpDirs = []
-
-    dirUI =  os.path.dirname(pathUi)
-    if not dirUI in sys.path:
-        tmpDirs.append(dirUI)
-
-    for prop in toRemove:
-        prop.parentNode().removeChild(prop)
-    del toRemove
+        # remove iconset resource names, e.g.<iconset resource="../qpsbitflagrenderer.qrc">
+        elems = doc.elementsByTagName('iconset')
+        for i in range(elems.count()):
+            node = elems.item(i).toElement()
+            attribute = node.attribute('resource')
+            if len(attribute) > 0:
+                node.removeAttribute('resource')
 
     buffer = io.StringIO()  # buffer to store modified XML
     buffer.write(doc.toString())
     buffer.flush()
     buffer.seek(0)
 
-    # load form class
-    for p in tmpDirs:
-        sys.path.append(p)
-
-    FORM_CLASS, _ = loadUiType(buffer, resource_suffix='')
-    buffer.close()
-    # remove temporary added directories from python path
-
-    for p in tmpDirs:
-        sys.path.remove(p)
-
-    return FORM_CLASS
+    if not loadUiType:
+        return uic.loadUi(buffer, baseinstance=baseinstance, package=package, resource_suffix=resource_suffix)
+    else:
+        return uic.loadUiType(buffer, resource_suffix=resource_suffix)
 
 
-def nextColor(color, mode='cat')->QColor:
+def nextColor(color, mode='cat') -> QColor:
     """
     Returns another color.
     :param color: QColor
@@ -171,7 +259,7 @@ def nextColor(color, mode='cat')->QColor:
     return QColor.fromHsl(hue, sat, value, alpha)
 
 
-def contrastColor(c:QColor)->QColor:
+def contrastColor(c: QColor) -> QColor:
     """
     Returns a QColor with good contrast to the input color c
     :param c: QColor
@@ -184,11 +272,11 @@ def contrastColor(c:QColor)->QColor:
         return QColor('black')
 
 
-class AboutBitFlagRenderer(QDialog, loadFormClass(PATH_ABOUT_UI)):
+class AboutBitFlagRenderer(QDialog):
     def __init__(self, parent=None):
         """Constructor."""
         super(AboutBitFlagRenderer, self).__init__(parent)
-        self.setupUi(self)
+        loadUi(PATH_ABOUT_UI, self)
         self.setWindowFlags(self.windowFlags() & ~Qt.WindowContextHelpButtonHint)
         self.init()
 
@@ -201,15 +289,15 @@ class AboutBitFlagRenderer(QDialog, loadFormClass(PATH_ABOUT_UI)):
         from bitflagrenderer import PATH_LICENSE, VERSION, PATH_CHANGELOG, PATH_ABOUT
         self.labelVersion.setText('{}'.format(VERSION))
 
-        def readTextFile(path:str):
+        def readTextFile(path: str):
             with open(path, encoding='utf-8') as f:
                 return f.read()
             return 'unable to read {}'.format(path)
 
         # page Changed
         self.tbAbout.setHtml(readTextFile(PATH_ABOUT))
-        #self.tbChanges.setHtml(readTextFile(PATH_CHANGELOG.as_posix() + '.html'))
-        #self.tbLicense.setHtml(readTextFile(os.path.splitext(PATH_LICENSE)[0] + '.html'))
+        # self.tbChanges.setHtml(readTextFile(PATH_CHANGELOG.as_posix() + '.html'))
+        # self.tbLicense.setHtml(readTextFile(os.path.splitext(PATH_LICENSE)[0] + '.html'))
 
         self.tbChanges.setPlainText(readTextFile(PATH_CHANGELOG.as_posix()))
         self.tbLicense.setPlainText(readTextFile(PATH_LICENSE.as_posix()))
@@ -241,17 +329,17 @@ class BitFlagState(object):
         state = BitFlagState(0, bitNumber, name=name, color=color, isVisible=visible)
         return state
 
-    def __init__(self, offset:int, number:int, name:str=None, color:QColor=None, isVisible:bool=False):
+    def __init__(self, offset: int, number: int, name: str = None, color: QColor = None, isVisible: bool = False):
 
-        self.mBitShift:int
+        self.mBitShift: int
         self.mBitShift = offset
         self.mNumber: int
         assert isinstance(number, int) and number >= 0
         self.mNumber = number
 
-        self.mName:str
+        self.mName: str
         if name is None:
-            name = 'state {}'.format(number+1)
+            name = 'state {}'.format(number + 1)
         self.mName = name
 
         if color is None:
@@ -259,26 +347,26 @@ class BitFlagState(object):
             for i in range(number):
                 color = nextColor(color, mode='cat')
 
-        self.mColor:QColor
+        self.mColor: QColor
         self.mColor = color
 
-        self.mVisible:bool
+        self.mVisible: bool
         self.mVisible = isVisible
 
     def __len__(self):
         return 0
 
-    def bitCombination(self, nbits=1)->str:
-        f = '{:0'+str(nbits)+'b}'
+    def bitCombination(self, nbits=1) -> str:
+        f = '{:0' + str(nbits) + 'b}'
         return f.format(self.mNumber)
 
-    def bitNumber(self)->str:
+    def bitNumber(self) -> str:
         return self.mNumber
 
-    def name(self)->str:
+    def name(self) -> str:
         return self.mName
 
-    def setValues(self, name:str=None, color=None, isVisible:bool=None):
+    def setValues(self, name: str = None, color=None, isVisible: bool = None):
 
         if isinstance(name, str):
             self.setName(name)
@@ -287,25 +375,24 @@ class BitFlagState(object):
         if isinstance(isVisible, bool):
             self.setVisible(isVisible)
 
-    def setName(self, name:str):
+    def setName(self, name: str):
         assert isinstance(name, str)
         self.mName = name
 
-    def isVisible(self)->bool:
+    def isVisible(self) -> bool:
         return self.mVisible
 
-    def setVisible(self, b:bool):
+    def setVisible(self, b: bool):
         assert isinstance(b, bool)
         self.mVisible = b
 
-    def color(self)->QColor:
+    def color(self) -> QColor:
         return self.mColor
 
     def setColor(self, color):
         self.mColor = QColor(color)
 
-
-    def writeXml(self, doc:QDomDocument, parentElement:QDomElement):
+    def writeXml(self, doc: QDomDocument, parentElement: QDomElement):
 
         if parentElement.isNull():
             return
@@ -333,13 +420,13 @@ class BitFlagState(object):
             return self.mBitShift < other.mBitShift
 
 
-
 class BitFlagParameter(object):
     """
     A class to define possible states of a flag / flag-set
     """
+
     @staticmethod
-    def fromXml(element:QDomElement):
+    def fromXml(element: QDomElement):
         assert isinstance(element, QDomElement)
         if element.isNull() or element.nodeName() != BitFlagParameter.__name__:
             return None
@@ -360,12 +447,10 @@ class BitFlagParameter(object):
 
         return parameter
 
-
-
-    def __init__(self, name:str, firstBit:int, bitCount:int=1):
+    def __init__(self, name: str, firstBit: int, bitCount: int = 1):
         assert isinstance(name, str)
         assert isinstance(firstBit, int) and firstBit >= 0
-        assert isinstance(bitCount, int) and bitCount >= 1 and bitCount <= 128 # this should be enough
+        assert isinstance(bitCount, int) and bitCount >= 1 and bitCount <= 128  # this should be enough
 
         # initialize the parameter states
         self.mName = name
@@ -373,7 +458,7 @@ class BitFlagParameter(object):
         self.mBitSize = bitCount
         self.mFlagStates = list()
 
-        self.mIsExpanded : bool
+        self.mIsExpanded: bool
         self.mIsExpanded = True
 
         color0 = QColor('black')
@@ -396,7 +481,8 @@ class BitFlagParameter(object):
     def __eq__(self, other):
         if not isinstance(other, BitFlagParameter):
             return None
-        if not len(other) == len(self) and self.name() == other.name() and self.mStartBit == other.mStartBit and self.mBitSize == other.mBitSize:
+        if not len(other) == len(
+                self) and self.name() == other.name() and self.mStartBit == other.mStartBit and self.mBitSize == other.mBitSize:
             return False
         for s1, s2 in zip(self.mFlagStates, other.mFlagStates):
             if not s1 == s2:
@@ -410,13 +496,13 @@ class BitFlagParameter(object):
     def __getitem__(self, slice):
         return self.mFlagStates[slice]
 
-    def __iter__(self)->typing.Iterator[BitFlagState]:
+    def __iter__(self) -> typing.Iterator[BitFlagState]:
         return iter(self.mFlagStates)
 
-    def bitCount(self)->int:
+    def bitCount(self) -> int:
         return self.mBitSize
 
-    def setFirstBit(self, firstBit:int):
+    def setFirstBit(self, firstBit: int):
         assert isinstance(firstBit, int) and firstBit >= 0
         self.mStartBit = firstBit
         for state in self.states():
@@ -429,17 +515,17 @@ class BitFlagParameter(object):
         assert isinstance(other, BitFlagParameter)
         return self.mStartBit < other.mStartBit
 
-    def __repr__(self)->str:
+    def __repr__(self) -> str:
         info = ': {}-{}, "{}"'.format(self.mStartBit, self.mBitSize, self.mName)
         return super(BitFlagParameter, self).__repr__() + info
 
-    def setBitSize(self, bitSize:int):
+    def setBitSize(self, bitSize: int):
         assert isinstance(bitSize, int) and bitSize >= 1
         nStates0 = 2 ** self.mBitSize
         nStates2 = 2 ** bitSize
         n = len(self.mFlagStates)
         self.mBitSize = bitSize
-        diff = 2**bitSize - n
+        diff = 2 ** bitSize - n
         if diff > 0:
             # add missing states
             for i in range(diff):
@@ -451,23 +537,23 @@ class BitFlagParameter(object):
             remove = self.mFlagStates[n + diff:]
             del self.mFlagStates[n + diff:]
 
-    def states(self)->typing.List[BitFlagState]:
+    def states(self) -> typing.List[BitFlagState]:
         return self.mFlagStates
 
-    def visibleStates(self)->typing.List[BitFlagState]:
+    def visibleStates(self) -> typing.List[BitFlagState]:
         return [state for state in self.mFlagStates if state.isVisible()]
 
-    def name(self)->str:
+    def name(self) -> str:
         return self.mName
 
-    def setName(self, name:str):
+    def setName(self, name: str):
         assert isinstance(name, str)
         self.mName = name
 
-    def firstBit(self)->int:
+    def firstBit(self) -> int:
         return self.mStartBit
 
-    def lastBit(self)->int:
+    def lastBit(self) -> int:
         """
         Returns the last bit affected by this FlagState
         :return:
@@ -475,7 +561,7 @@ class BitFlagParameter(object):
         """
         return self.mStartBit + self.mBitSize - 1
 
-    def writeXml(self, doc:QDomDocument, parentElement:QDomElement):
+    def writeXml(self, doc: QDomDocument, parentElement: QDomElement):
 
         if parentElement.isNull():
             return
@@ -488,6 +574,7 @@ class BitFlagParameter(object):
             state.writeXml(doc, parameterNode)
 
         parentElement.appendChild(parameterNode)
+
 
 class BitFlagScheme(object):
 
@@ -520,16 +607,14 @@ class BitFlagScheme(object):
 
         return SCHEMES
 
-
     @staticmethod
-    def fromFile(path:str)->typing.List:
+    def fromFile(path: str) -> typing.List:
         schemes = []
         if os.path.isfile(path):
             with open(path, 'r', encoding='utf-8') as f:
                 xml = f.read()
                 dom = QDomDocument()
                 dom.setContent(xml)
-
 
                 schemeNodes = dom.elementsByTagName(BitFlagScheme.__name__)
                 for i in range(schemeNodes.count()):
@@ -539,15 +624,14 @@ class BitFlagScheme(object):
 
         return schemes
 
+    def __init__(self, name: str = 'unspecified name'):
 
-    def __init__(self, name:str='unspecified name'):
-
-        self.mName : str
+        self.mName: str
         self.mName = name
 
         self.mNoDataColor = QColor(0, 0, 0, 0)
 
-        self.mParameters : list
+        self.mParameters: list
         self.mParameters = []
 
     def __eq__(self, other):
@@ -565,7 +649,7 @@ class BitFlagScheme(object):
     def __len__(self):
         return len(self.mParameters)
 
-    def __iter__(self)->typing.List[BitFlagParameter]:
+    def __iter__(self) -> typing.List[BitFlagParameter]:
         return iter(self.mParameters)
 
     def __contains__(self, item):
@@ -584,7 +668,6 @@ class BitFlagScheme(object):
         scheme.setName(element.attribute('name'))
         scheme.setNoDataColor(element.attribute('noDataColor'))
 
-
         parameterNodes = element.elementsByTagName(BitFlagParameter.__name__)
         for i in range(parameterNodes.count()):
             parameter = BitFlagParameter.fromXml(parameterNodes.at(i).toElement())
@@ -593,7 +676,7 @@ class BitFlagScheme(object):
 
         return scheme
 
-    def visibleStates(self)->typing.List[BitFlagState]:
+    def visibleStates(self) -> typing.List[BitFlagState]:
         """
         Returns all visible BitFlagStates
         :return: list
@@ -604,31 +687,31 @@ class BitFlagScheme(object):
             visible.extend(p.visibleStates())
         return visible
 
-    def noDataColor(self)->QColor:
+    def noDataColor(self) -> QColor:
         return self.mNoDataColor
 
     def setNoDataColor(self, color):
         self.mNoDataColor = QColor(color)
 
-    def setName(self, name:str):
+    def setName(self, name: str):
         assert isinstance(name, str)
         self.mName = name
 
-    def name(self)->str:
+    def name(self) -> str:
         return self.mName
 
     def writeXMLFile(self, path):
 
         doc = QDomDocument()
 
-        root = doc.createElement(self.__class__.__name__+'s')
+        root = doc.createElement(self.__class__.__name__ + 's')
         self.writeXml(doc, root)
         doc.appendChild(root)
 
         with open(path, 'w', encoding='utf-8') as f:
             f.write(doc.toString())
 
-    def writeXml(self, doc:QDomDocument, parentElement:QDomElement):
+    def writeXml(self, doc: QDomDocument, parentElement: QDomElement):
 
         if parentElement.isNull():
             return
@@ -640,6 +723,7 @@ class BitFlagScheme(object):
         for parameter in self:
             parameter.writeXml(doc, schemeNode)
         parentElement.appendChild(schemeNode)
+
 
 class BitFlagModel(QAbstractItemModel):
 
@@ -664,11 +748,10 @@ class BitFlagModel(QAbstractItemModel):
     def __getitem__(self, slice):
         return self.mFlagParameters[slice]
 
-
     def __len__(self):
         return len(self.mFlagParameters)
 
-    def __iter__(self)->typing.Iterator[BitFlagParameter]:
+    def __iter__(self) -> typing.Iterator[BitFlagParameter]:
         return iter(self.mFlagParameters)
 
     def __repr__(self):
@@ -696,13 +779,13 @@ class BitFlagModel(QAbstractItemModel):
     def columnCount(self, parent: QModelIndex = QModelIndex()) -> int:
         return len(self.columnNames())
 
-    def addFlagParameter(self, flagParameter:BitFlagParameter):
+    def addFlagParameter(self, flagParameter: BitFlagParameter):
         row = bisect.bisect(self.mFlagParameters, flagParameter)
         self.beginInsertRows(self.mRootIndex, row, row)
         self.mFlagParameters.insert(row, flagParameter)
         self.endInsertRows()
 
-    def removeFlagParameter(self, flagParameter:BitFlagParameter):
+    def removeFlagParameter(self, flagParameter: BitFlagParameter):
         if flagParameter in self.mFlagParameters:
             row = self.mFlagParameters.index(flagParameter)
             self.beginRemoveRows(self.mRootIndex, row, row)
@@ -754,14 +837,14 @@ class BitFlagModel(QAbstractItemModel):
 
         return QModelIndex()
 
-    def nextFreeBit(self)->int:
+    def nextFreeBit(self) -> int:
         if len(self) == 0:
             return 0
         else:
             lastParameter = self[-1]
-            return lastParameter.lastBit()+1
+            return lastParameter.lastBit() + 1
 
-    def index(self, row: int, column: int, parent: QModelIndex=QModelIndex()) -> QModelIndex:
+    def index(self, row: int, column: int, parent: QModelIndex = QModelIndex()) -> QModelIndex:
 
         if parent == self.mRootIndex:
             # root index -> return FlagParameter
@@ -772,7 +855,6 @@ class BitFlagModel(QAbstractItemModel):
             flagParameter = self[parent.row()]
             return self.createIndex(row, column, flagParameter[row])
         return QModelIndex()
-
 
     def data(self, index: QModelIndex, role: int) -> typing.Any:
 
@@ -798,8 +880,10 @@ class BitFlagModel(QAbstractItemModel):
                     return item.name()
 
             if role == Qt.CheckStateRole and index.column() == 0:
-                nStates = len(item)
-                nChecked = len(item.visibleStates())
+                # consider all states except of the first (empty bit)
+                considered_state = item.states()[1:]
+                nStates = len(considered_state)
+                nChecked = len([s for s in considered_state if s.isVisible()])
                 if nChecked == 0:
                     return Qt.Unchecked
                 elif nChecked < nStates:
@@ -885,11 +969,12 @@ class BitFlagModel(QAbstractItemModel):
                 if value in [Qt.Checked, Qt.Unchecked]:
                     # apply new checkstate downwards to all FlagStates
                     for row in range(len(item)):
+                        if row == 0: # row 0 = empty flag -> consider higher values only
+                            continue
                         stateIndex = self.index(row, 0, index)
                         if self.data(stateIndex, Qt.CheckStateRole) != value:
                             self.setData(stateIndex, value, Qt.CheckStateRole)
                             result = True
-
 
             if role == Qt.EditRole:
                 if cName == self.cnName:
@@ -908,25 +993,23 @@ class BitFlagModel(QAbstractItemModel):
                         result = True
                     elif matchRange:
                         bit1, bit2 = sorted([int(matchRange.group(1)), int(matchRange.group(2))])
-                        bitSize = bit2-bit1+1
+                        bitSize = bit2 - bit1 + 1
 
                     if isinstance(bit1, int) and isinstance(bitSize, int) and bitSize > 0:
                         bitSize = min(bitSize, MAX_BITS_PER_PARAMETER)
                         item.setFirstBit(bit1)
                         n1 = len(item)
-                        n2 = 2**bitSize
+                        n2 = 2 ** bitSize
                         diff = n2 - n1
                         if diff < 0:
-                            self.beginRemoveRows(index, n2, n1-1)
+                            self.beginRemoveRows(index, n2, n1 - 1)
                             item.setBitSize(bitSize)
                             self.endRemoveRows()
                         elif diff > 0:
-                            self.beginInsertRows(index, n1, n2-1)
+                            self.beginInsertRows(index, n1, n2 - 1)
                             item.setBitSize(bitSize)
                             self.endInsertRows()
                         result = True
-
-
 
         if result == True:
             self.dataChanged.emit(index, index, [role])
@@ -936,7 +1019,7 @@ class BitFlagModel(QAbstractItemModel):
     def clear(self):
 
         n = self.rowCount()
-        self.beginRemoveRows(QModelIndex(), 0, n-1)
+        self.beginRemoveRows(QModelIndex(), 0, n - 1)
         self.mFlagParameters.clear()
         self.endRemoveRows()
 
@@ -956,7 +1039,8 @@ class BitFlagSortFilterProxyModel(QSortFilterProxyModel):
         :return:
         :rtype:
         """
-        if isinstance(left.internalPointer(), BitFlagParameter) and isinstance(right.internalPointer(), BitFlagParameter) \
+        if isinstance(left.internalPointer(), BitFlagParameter) and isinstance(right.internalPointer(),
+                                                                               BitFlagParameter) \
                 and left.column() == 0 and right.column() == 0:
             b1 = left.internalPointer().firstBit()
             b2 = right.internalPointer().firstBit()
@@ -968,16 +1052,44 @@ class BitFlagSortFilterProxyModel(QSortFilterProxyModel):
         else:
             return super(BitFlagSortFilterProxyModel, self).lessThan(left, right)
 
-class BitFlagRendererWidget(QgsRasterRendererWidget, loadFormClass(PATH_UI)):
+class BitFlagRendererTreeView(QTreeView):
 
-    def __init__(self, layer:QgsRasterLayer, extent:QgsRectangle):
+    def __init__(self, *args, **kwds):
+        super().__init__(*args, **kwds)
+
+    def contextMenu(self, event: QContextMenuEvent) -> QMenu:
+        """
+        Create the context menu
+        """
+        cidx = self.currentIndex()
+
+        model = self.model()
+
+        m = QMenu()
+
+        if bool(self.model().flags(cidx) & Qt.ItemIsEditable):
+            a = m.addAction('Edit')
+            a.triggered.connect(lambda *args, idx=cidx: self.edit(idx))
+
+        return m
+
+    def contextMenuEvent(self, event: QContextMenuEvent) -> None:
+        """
+        Opens a context menu
+        """
+        m = self.contextMenu(event)
+        m.exec_(event.globalPos())
+
+class BitFlagRendererWidget(QgsRasterRendererWidget):
+
+    def __init__(self, layer: QgsRasterLayer, extent: QgsRectangle):
         super(BitFlagRendererWidget, self).__init__(layer, extent)
-        self.setupUi(self)
+        loadUi(PATH_UI, self)
         self.mRasterBandComboBox.setShowNotSetOption(False)
 
         assert isinstance(self.mTreeView, QTreeView)
 
-        self.mFlagModel:BitFlagModel
+        self.mFlagModel: BitFlagModel
         self.mFlagModel = BitFlagModel()
         self.mProxyModel = BitFlagSortFilterProxyModel()
         self.mProxyModel.setSourceModel(self.mFlagModel)
@@ -1017,14 +1129,13 @@ class BitFlagRendererWidget(QgsRasterRendererWidget, loadFormClass(PATH_UI)):
         scheme.mParameters.extend(self.mFlagModel.mFlagParameters)
         SaveFlagSchemeDialog.save(scheme)
 
-
     def adjustColumnSizes(self, *args):
 
         for i, c in enumerate(self.mFlagModel.columnNames()):
             if c != self.mFlagModel.cnName:
                 self.mTreeView.resizeColumnToContents(i)
 
-    def setBitFlagScheme(self, scheme:BitFlagScheme=None, name:str=None):
+    def setBitFlagScheme(self, scheme: BitFlagScheme = None, name: str = None):
 
         if not isinstance(scheme, BitFlagScheme):
             schemes = BitFlagScheme.loadAllSchemes()
@@ -1056,8 +1167,7 @@ class BitFlagRendererWidget(QgsRasterRendererWidget, loadFormClass(PATH_UI)):
             self.adjustColumnSizes()
             self.widgetChanged.emit()
 
-
-    def bitFlagScheme(self)->BitFlagScheme:
+    def bitFlagScheme(self) -> BitFlagScheme:
 
         scheme = BitFlagScheme(self.mLastBitFlagSchemeName)
         scheme.mNoDataColor = QColor(self.mNoDataColor)
@@ -1073,7 +1183,7 @@ class BitFlagRendererWidget(QgsRasterRendererWidget, loadFormClass(PATH_UI)):
                  'sortColumn': self.mProxyModel.sortColumn(),
                  'sortOrder': self.mProxyModel.sortOrder(),
                  'expandedPositions': isExpanded,
-                 'columnWidths':columnWidths}
+                 'columnWidths': columnWidths}
 
         settings().setValue(SettingsKeys.TreeViewState.value, pickle.dumps(state))
 
@@ -1082,7 +1192,7 @@ class BitFlagRendererWidget(QgsRasterRendererWidget, loadFormClass(PATH_UI)):
         dump = settings().value(SettingsKeys.TreeViewState.value, None)
         if dump is not None:
             tv = self.treeView()
-            #tv.blockSignals(True)
+            # tv.blockSignals(True)
             try:
 
                 d = pickle.loads(dump)
@@ -1092,7 +1202,6 @@ class BitFlagRendererWidget(QgsRasterRendererWidget, loadFormClass(PATH_UI)):
 
                 expanded = d.get('expandedPositions', [])
                 columnWidths = d.get('columnWidths', [])
-
 
                 for row in range(min(len(expanded), self.mProxyModel.rowCount())):
                     idx = self.mProxyModel.index(row, 0)
@@ -1104,7 +1213,7 @@ class BitFlagRendererWidget(QgsRasterRendererWidget, loadFormClass(PATH_UI)):
             except Exception as ex:
                 s = ""
 
-            #tv.blockSignals(False)
+            # tv.blockSignals(False)
 
     def onTreeViewDoubleClick(self, idx):
         idx = self.mProxyModel.mapToSource(idx)
@@ -1112,11 +1221,11 @@ class BitFlagRendererWidget(QgsRasterRendererWidget, loadFormClass(PATH_UI)):
         cname = self.mFlagModel.columnNames()[idx.column()]
         if isinstance(item, BitFlagState) and cname == self.mFlagModel.cnColor:
             c = QgsColorDialog.getColor(item.color(), self.treeView(), \
-                                      'Set color for "{}"'.format(item.name()))
+                                        'Set color for "{}"'.format(item.name()))
 
             self.mFlagModel.setData(idx, c, role=Qt.EditRole)
 
-    def setRasterLayer(self, layer:QgsRasterLayer):
+    def setRasterLayer(self, layer: QgsRasterLayer):
         super(BitFlagRendererWidget, self).setRasterLayer(layer)
         self.mRasterBandComboBox.setLayer(layer)
         if isinstance(layer, QgsRasterLayer):
@@ -1138,7 +1247,7 @@ class BitFlagRendererWidget(QgsRasterRendererWidget, loadFormClass(PATH_UI)):
     def onSelectionChanged(self, selected, deselected):
         self.updateWidgets()
 
-    def selectedBand(self, index:int=0):
+    def selectedBand(self, index: int = 0):
         return self.mRasterBandComboBox.currentBand()
 
     def onAddParameter(self):
@@ -1157,10 +1266,7 @@ class BitFlagRendererWidget(QgsRasterRendererWidget, loadFormClass(PATH_UI)):
         b = self.mFlagModel.nextFreeBit() < self.layerBitCount()
         self.actionAddParameter.setEnabled(b)
 
-
-
-
-    def renderer(self)->QgsRasterRenderer:
+    def renderer(self) -> QgsRasterRenderer:
 
         self.saveTreeViewState()
 
@@ -1171,7 +1277,6 @@ class BitFlagRendererWidget(QgsRasterRendererWidget, loadFormClass(PATH_UI)):
         scheme = BitFlagScheme(self.mLastBitFlagSchemeName)
         parameters = []
         for row in range(self.mFlagModel.rowCount()):
-
             idxS = self.mFlagModel.index(row, 0)
             idxP = self.mProxyModel.mapFromSource(idxS)
             b = self.mTreeView.isExpanded(idxP)
@@ -1185,8 +1290,6 @@ class BitFlagRendererWidget(QgsRasterRendererWidget, loadFormClass(PATH_UI)):
 
         return r
 
-
-
     def onRemoveParameters(self):
 
         selectedRows = self.mTreeView.selectionModel().selectedRows()
@@ -1199,11 +1302,10 @@ class BitFlagRendererWidget(QgsRasterRendererWidget, loadFormClass(PATH_UI)):
         for parameter in reversed(toRemove):
             self.mFlagModel.removeFlagParameter(parameter)
 
-
-    def treeView(self)->QTreeView:
+    def treeView(self) -> QTreeView:
         return self.mTreeView
 
-    def layerBitCount(self)->int:
+    def layerBitCount(self) -> int:
         lyr = self.rasterLayer()
         if isinstance(lyr, QgsRasterLayer):
             return gdal.GetDataTypeSize(lyr.dataProvider().dataType(self.selectedBand()))
@@ -1215,22 +1317,19 @@ class BitFlagRendererWidget(QgsRasterRendererWidget, loadFormClass(PATH_UI)):
         self.mRasterBandComboBox.setToolTip('')
 
 
-
-class SaveFlagSchemeDialog(QDialog, loadFormClass(PATH_UI_SAVE_FLAG_SCHEMA)):
+class SaveFlagSchemeDialog(QDialog):
 
     @staticmethod
-    def save(schema:BitFlagScheme):
+    def save(schema: BitFlagScheme):
         d = SaveFlagSchemeDialog(schema)
         if d.exec_() == QDialog.Accepted:
-
             schema = copy.deepcopy(schema)
             schema.setName(d.schemaName())
             schema.writeXMLFile(d.filePath())
 
-
-    def __init__(self, schema:BitFlagScheme, parent=None):
+    def __init__(self, schema: BitFlagScheme, parent=None):
         super(SaveFlagSchemeDialog, self).__init__(parent=parent)
-        self.setupUi(self)
+        loadUi(PATH_UI_SAVE_FLAG_SCHEMA, self)
         assert isinstance(schema, BitFlagScheme)
         self.mSchema = copy.deepcopy(schema)
 
@@ -1242,22 +1341,23 @@ class SaveFlagSchemeDialog(QDialog, loadFormClass(PATH_UI_SAVE_FLAG_SCHEMA)):
         self.tbSchemaName.setText(schema.name())
 
         filePath = schema.name().encode().decode('ascii', 'replace').replace(u'\ufffd', '_')
-        filePath = re.sub(r'[ ]', '_', filePath)+'.xml'
+        filePath = re.sub(r'[ ]', '_', filePath) + '.xml'
         filePath = root / filePath
         self.wSchemeFilePath.setFilePath(filePath.as_posix())
 
-    def schemaName(self)->str:
+    def schemaName(self) -> str:
         return self.tbSchemaName.text()
 
-    def schema(self)->BitFlagScheme:
+    def schema(self) -> BitFlagScheme:
         return self.mSchema
 
-    def filePath(self)->str:
+    def filePath(self) -> str:
         """
         :return:
         :rtype:
         """
         return pathlib.Path(self.wSchemeFilePath.filePath()).as_posix()
+
 
 class BitFlagRenderer(QgsSingleBandGrayRenderer):
     """
@@ -1266,28 +1366,27 @@ class BitFlagRenderer(QgsSingleBandGrayRenderer):
     that inherit QgsRasterRenderer directyl
     """
 
-
     def __init__(self, input=None):
         super(BitFlagRenderer, self).__init__(input, 1)
 
-        self.mFlagScheme : BitFlagScheme
+        self.mFlagScheme: BitFlagScheme
         self.mFlagScheme = BitFlagScheme()
         self.mBand = 1
 
-    #def type(self)->str:
+    # def type(self)->str:
     #    return TYPE
 
-    def setBand(self, band:int):
+    def setBand(self, band: int):
         self.mBand = band
 
     def setGrayBand(self, band):
         self.setBand(band)
 
-    def setBitFlagScheme(self, flagScheme:BitFlagScheme):
+    def setBitFlagScheme(self, flagScheme: BitFlagScheme):
         assert isinstance(flagScheme, BitFlagScheme)
         self.mFlagScheme = flagScheme
 
-    def bitFlagScheme(self)->BitFlagScheme:
+    def bitFlagScheme(self) -> BitFlagScheme:
         return self.mFlagScheme
 
     def __reduce_ex__(self, protocol):
@@ -1301,10 +1400,10 @@ class BitFlagRenderer(QgsSingleBandGrayRenderer):
         d = pickle.loads(state)
         self.__dict__.update(d)
 
-    def usesBands(self)->typing.List[int]:
+    def usesBands(self) -> typing.List[int]:
         return [self.mBand]
 
-    def writeXml(self, doc:QDomDocument, parentElem:QDomElement):
+    def writeXml(self, doc: QDomDocument, parentElem: QDomElement):
 
         if parentElem.isNull():
             return
@@ -1320,8 +1419,7 @@ class BitFlagRenderer(QgsSingleBandGrayRenderer):
         minMaxOriginElement = doc.createElement('minMaxOrigin')
         self.minMaxOrigin().writeXml(doc, minMaxOriginElement)
 
-
-    def readXml(self, rendererElem:QDomElement):
+    def readXml(self, rendererElem: QDomElement):
 
         pass
 
@@ -1342,8 +1440,6 @@ class BitFlagRenderer(QgsSingleBandGrayRenderer):
                 item = (flagState.name(), flagState.color())
                 items.append(item)
         return items
-
-
 
     def block(self, band_nr: int, extent: QgsRectangle, width: int, height: int,
               feedback: QgsRasterBlockFeedback = None):
@@ -1370,13 +1466,12 @@ class BitFlagRenderer(QgsSingleBandGrayRenderer):
 
         npx = height * width
 
-
         band_block = self.input().block(self.mBand, extent, width, height)
         assert isinstance(band_block, QgsRasterBlock)
         band_data = np.frombuffer(band_block.data(), dtype=QGIS2NUMPY_DATA_TYPES[band_block.dataType()])
         assert len(band_data) == npx
         # THIS! seems to be a very fast way to convert block data into a numpy array
-        #block_data[b, :] = band_data
+        # block_data[b, :] = band_data
 
         parameterNumbers = np.zeros(band_data.shape, dtype=np.uint8)
         for i, flagParameter in enumerate(reversed(self.bitFlagScheme())):
@@ -1385,7 +1480,7 @@ class BitFlagRenderer(QgsSingleBandGrayRenderer):
             # extract the parameter number
             for b in range(flagParameter.bitCount()):
                 mask = 1 << (flagParameter.firstBit() + b)
-                parameterNumbers += 2**b * np.uint8((band_data & mask) != 0)
+                parameterNumbers += 2 ** b * np.uint8((band_data & mask) != 0)
 
             # compare each flag state
             for j, flagState in enumerate(flagParameter):
@@ -1408,7 +1503,7 @@ class BitFlagRenderer(QgsSingleBandGrayRenderer):
 
 class BitFlagLayerConfigWidget(QgsMapLayerConfigWidget):
 
-    def __init__(self, layer:QgsRasterLayer, canvas:QgsMapCanvas, parent:QWidget=None):
+    def __init__(self, layer: QgsRasterLayer, canvas: QgsMapCanvas, parent: QWidget = None):
 
         super(BitFlagLayerConfigWidget, self).__init__(layer, canvas, parent=parent)
 
@@ -1416,23 +1511,21 @@ class BitFlagLayerConfigWidget(QgsMapLayerConfigWidget):
         self.setPanelTitle('Flag Layer Settings')
         self.mCanvas = canvas
         self.mLayer = layer
-        self.mRenderWidget : BitFlagRendererWidget
+        self.mRenderWidget: BitFlagRendererWidget
         if isinstance(layer, QgsRasterLayer) and layer.isValid():
             ext = layer.extent()
         else:
             ext = QgsRectangle()
-
 
         self.mIsInDockMode = False
         self.mRenderWidget = BitFlagRendererWidget(layer, ext)
         self.mRenderWidget.widgetChanged.connect(self.apply)
         self.layout().addWidget(self.mRenderWidget)
 
-
     def shouldTriggerLayerRepaint(self):
         return True
 
-    def renderer(self)->QgsRasterRenderer:
+    def renderer(self) -> QgsRasterRenderer:
         return self.mRenderWidget.renderer()
 
     def apply(self):
@@ -1442,11 +1535,10 @@ class BitFlagLayerConfigWidget(QgsMapLayerConfigWidget):
             self.mLayer.setRenderer(r)
             self.mLayer.triggerRepaint()
 
-    def setDockMode(self, dockMode:bool):
+    def setDockMode(self, dockMode: bool):
         print('SET DOCKMODE CALLED')
         self.mIsInDockMode = dockMode
         super(BitFlagLayerConfigWidget, self).setDockMode(dockMode)
-
 
 
 class BitFlagLayerConfigWidgetFactory(QgsMapLayerConfigWidgetFactory):
@@ -1460,12 +1552,12 @@ class BitFlagLayerConfigWidgetFactory(QgsMapLayerConfigWidgetFactory):
         self.mWidget = None
         self.mIcon = QIcon(PATH_ICON)
 
-
     def supportsLayer(self, layer):
         b = False
         if isinstance(layer, QgsRasterLayer) and layer.isValid():
             dt = layer.dataProvider().dataType(1)
-            b = dt in [gdal.GDT_Byte, gdal.GDT_Int16, gdal.GDT_Int32, gdal.GDT_UInt16, gdal.GDT_UInt32, gdal.GDT_CInt16, gdal.GDT_CInt32]
+            b = dt in [gdal.GDT_Byte, gdal.GDT_Int16, gdal.GDT_Int32, gdal.GDT_UInt16, gdal.GDT_UInt32, gdal.GDT_CInt16,
+                       gdal.GDT_CInt32]
 
             if not b:
                 print(dt)
@@ -1474,7 +1566,7 @@ class BitFlagLayerConfigWidgetFactory(QgsMapLayerConfigWidgetFactory):
             print('Unsupported: {}'.format(layer))
         return b
 
-    def icon(self)->QIcon:
+    def icon(self) -> QIcon:
         return self.mIcon
 
     def supportLayerPropertiesDialog(self):
@@ -1483,8 +1575,7 @@ class BitFlagLayerConfigWidgetFactory(QgsMapLayerConfigWidgetFactory):
     def supportsStyleDock(self):
         return True
 
-
-    def createWidget(self, layer, canvas, dockWidget=True, parent=None)->QgsMapLayerConfigWidget:
+    def createWidget(self, layer, canvas, dockWidget=True, parent=None) -> QgsMapLayerConfigWidget:
         return BitFlagLayerConfigWidget(layer, canvas, parent=parent)
 
 
@@ -1493,6 +1584,7 @@ def registerConfigWidgetFactory():
     if not isinstance(FACTORY, BitFlagLayerConfigWidgetFactory):
         FACTORY = BitFlagLayerConfigWidgetFactory()
         qgis.utils.iface.registerMapLayerConfigWidgetFactory(FACTORY)
+
 
 def unregisterConfigWidgetFactory():
     global FACTORY

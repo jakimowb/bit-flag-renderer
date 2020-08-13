@@ -14,20 +14,18 @@
 ***************************************************************************/
 """
 
-import unittest, pathlib, sys, os, re
+import unittest
 
 from qps.testing import initQgisApplication
+
 #from qgis.testing import start_app
 #QAPP = start_app()
 #QAPP.setPkgDataPath(re.sub(r'/\.$', '/Library', QAPP.pkgDataPath()))
 QAPP = initQgisApplication()
 from qps.utils import file_search
+from qps.testing import TestObjects, TestCase
 from bitflagrenderer.bitflagrenderer import *
 
-
-
-
-SHOW_GUI = False and os.environ.get('CI') is None
 
 
 from bitflagrenderer import DIR_EXAMPLE_DATA, DIR_REPO
@@ -38,7 +36,7 @@ pathTOAImage = list(file_search(DIR_EXAMPLE_DATA, re.compile(r'.*TOA.*\.tif$')))
 DIR_TMP = DIR_REPO / 'tmp'
 os.makedirs(DIR_TMP, exist_ok=True)
 
-class BitFlagRendererTests(unittest.TestCase):
+class BitFlagRendererTests(TestCase):
 
 
     def bitFlagLayer(self)->QgsRasterLayer:
@@ -110,10 +108,7 @@ class BitFlagRendererTests(unittest.TestCase):
         flagModel.setData(idx, '1-3', role=[Qt.EditRole])
         flagModel.setData(idx, '3', role=[Qt.EditRole])
 
-
-
-        if SHOW_GUI:
-            QAPP.exec_()
+        self.showGui(tv)
 
 
     def test_BitFlagRendererWidget(self):
@@ -159,14 +154,9 @@ class BitFlagRendererTests(unittest.TestCase):
         top.layout().addLayout(v)
         top.show()
 
-
         w.saveTreeViewState()
 
-
-        #w.setBitFlagScheme()
-
-        if SHOW_GUI:
-            QAPP.exec_()
+        self.showGui(top)
 
 
     def test_BitFlagSchemes(self):
@@ -204,9 +194,7 @@ class BitFlagRendererTests(unittest.TestCase):
 
         self.assertEqual(schema, d.schema())
 
-        if SHOW_GUI:
-            if d.exec_() == QDialog.Accepted:
-                s = ""
+        self.showGui(d)
 
     def test_BitFlagRenderer(self):
 
@@ -242,8 +230,7 @@ class BitFlagRendererTests(unittest.TestCase):
         canvas.show()
         canvas.waitWhileRendering()
 
-        if SHOW_GUI:
-            QAPP.exec_()
+        self.showGui(canvas)
 
     def test_BitFlagLayerConfigWidget(self):
 
@@ -270,11 +257,7 @@ class BitFlagRendererTests(unittest.TestCase):
         top.layout().addWidget(w)
         top.show()
 
-        #w = factory.createWidget(lyr, canvas)
-        #w.show()
-
-        if SHOW_GUI:
-            QAPP.exec_()
+        self.showGui(w)
 
     def test_factory(self):
 
@@ -288,8 +271,7 @@ class BitFlagRendererTests(unittest.TestCase):
         d = AboutBitFlagRenderer()
         d.show()
 
-        if SHOW_GUI:
-            QAPP.exec_()
+        self.showGui(d)
 
 
     def test_Plugin(self):
@@ -336,8 +318,7 @@ class BitFlagRendererTests(unittest.TestCase):
         w.show()
         cw = w.currentRenderWidget().renderer().type()
 
-        if SHOW_GUI:
-            QAPP.exec_()
+        self.showGui(w)
 
 if __name__ == '__main__':
     unittest.main()
