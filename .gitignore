@@ -9,6 +9,7 @@ doc/build/
 deploy/*
 temp/
 doc/build/*
+*_rc.py
 tests/outputs
 tests/outputs/*
 test-reports.txt
