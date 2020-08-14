@@ -432,10 +432,12 @@ class BitFlagParameter(object):
             return None
 
         name = element.attribute('name')
+        zValue = int(element.attribute('z'))
         firstBit = int(element.attribute('firstBit'))
         bitCount = int(element.attribute('bitCount'))
 
         parameter = BitFlagParameter(name, firstBit, bitCount)
+        parameter.setZValue(zValue)
         stateNodes = element.elementsByTagName(BitFlagState.__name__)
 
         for i in range(min(len(parameter), stateNodes.count())):
@@ -453,10 +455,11 @@ class BitFlagParameter(object):
         assert isinstance(bitCount, int) and bitCount >= 1 and bitCount <= 128  # this should be enough
 
         # initialize the parameter states
-        self.mName = name
-        self.mStartBit = firstBit
-        self.mBitSize = bitCount
+        self.mName: str = name
+        self.mStartBit: int = firstBit
+        self.mBitSize: int = bitCount
         self.mFlagStates = list()
+        self.mZValue: int = 1
 
         self.mIsExpanded: bool
         self.mIsExpanded = True
@@ -477,6 +480,13 @@ class BitFlagParameter(object):
             self[1].setValues('Yes', QColor('black'), False)
         else:
             self[0].setValues('No', QColor('white'), False)
+
+    def zValue(self) -> int:
+        return self.mZValue
+
+    def setZValue(self, z: int):
+        assert isinstance(z, int)
+        self.mZValue = z
 
     def __eq__(self, other):
         if not isinstance(other, BitFlagParameter):
@@ -568,6 +578,7 @@ class BitFlagParameter(object):
 
         parameterNode = doc.createElement(self.__class__.__name__)
         parameterNode.setAttribute('name', self.name())
+        parameterNode.setAttribute('z', self.zValue())
         parameterNode.setAttribute('firstBit', self.firstBit())
         parameterNode.setAttribute('bitCount', self.bitCount())
         for state in self:
@@ -740,8 +751,18 @@ class BitFlagModel(QAbstractItemModel):
 
         self.mRootIndex = QModelIndex()
 
+        self.mColumnNames: typing.List[str] = [self.cnBitPosition, self.cnName, self.cnBitComb, self.cnBitNum, self.cnColor]
+
+        self.mColumnToolTips: typing.List[str] = [
+            'The Flag Parameters bit position(s), e.g. "0" or "1-2"',
+            'Flag Parameter / Flag State name',
+            'Bit combination of the Flag State',
+            "Number of bit combination within a Flag states's possible bit combinations",
+            "Color of Flag State or Z-Value for colors of a Flag Parameter"
+        ]
+
     def columnNames(self):
-        return [self.cnBitPosition, self.cnName, self.cnBitComb, self.cnBitNum, self.cnColor]
+        return
 
     def __contains__(self, item):
         return item in self.mFlagParameters
@@ -778,7 +799,7 @@ class BitFlagModel(QAbstractItemModel):
         return len(item)
 
     def columnCount(self, parent: QModelIndex = QModelIndex()) -> int:
-        return len(self.columnNames())
+        return len(self.mColumnNames)
 
     def addFlagParameter(self, flagParameter: BitFlagParameter):
         row = bisect.bisect(self.mFlagParameters, flagParameter)
@@ -796,8 +817,11 @@ class BitFlagModel(QAbstractItemModel):
     def headerData(self, section, orientation, role):
         assert isinstance(section, int)
 
-        if orientation == Qt.Horizontal and role == Qt.DisplayRole:
-            return self.columnNames()[section]
+        if orientation == Qt.Horizontal:
+            if role == Qt.DisplayRole:
+                return self.mColumnNames[section]
+            if role == Qt.ToolTipRole:
+                return self.mColumnToolTips[section]
 
         elif orientation == Qt.Vertical and role == Qt.DisplayRole:
             return section
@@ -808,7 +832,7 @@ class BitFlagModel(QAbstractItemModel):
         if not index.isValid():
             return Qt.NoItemFlags
 
-        cName = self.columnNames()[index.column()]
+        cName = self.mColumnNames[index.column()]
 
         flags = Qt.ItemIsEnabled | Qt.ItemIsSelectable
         if isinstance(index.internalPointer(), (BitFlagParameter, BitFlagState)) and index.column() == 0:
@@ -817,7 +841,7 @@ class BitFlagModel(QAbstractItemModel):
         if cName == self.cnName:
             flags = flags | Qt.ItemIsEditable
 
-        if cName == self.cnBitPosition and isinstance(index.internalPointer(), BitFlagParameter):
+        if isinstance(index.internalPointer(), BitFlagParameter) and cName in [self.cnBitPosition, self.cnColor]:
             flags = flags | Qt.ItemIsEditable
 
         return flags
@@ -858,16 +882,16 @@ class BitFlagModel(QAbstractItemModel):
         return QModelIndex()
 
     def data(self, index: QModelIndex, role: int) -> typing.Any:
-
         assert isinstance(index, QModelIndex)
         if not index.isValid():
             return None
 
         item = index.internalPointer()
-        cName = self.columnNames()[index.column()]
+        cName = self.mColumnNames[index.column()]
         if isinstance(item, BitFlagParameter):
 
             if role in [Qt.DisplayRole, Qt.EditRole]:
+
                 if cName == self.cnBitPosition:
                     if item.bitCount() == 1:
                         return '{}'.format(item.firstBit())
@@ -875,6 +899,12 @@ class BitFlagModel(QAbstractItemModel):
                         return '{}-{}'.format(item.firstBit(), item.lastBit())
                 if cName == self.cnName:
                     return item.name()
+
+            if cName == self.cnColor:
+                if role == Qt.DisplayRole:
+                    return f'Z={item.zValue()}'
+                elif role == Qt.EditRole:
+                    return item.zValue()
 
             if role == Qt.ToolTipRole:
                 if cName == self.cnName:
@@ -943,7 +973,7 @@ class BitFlagModel(QAbstractItemModel):
         result = False
         index
         item = index.internalPointer()
-        cName = self.columnNames()[index.column()]
+        cName = self.mColumnNames[index.column()]
 
         if isinstance(item, BitFlagState):
             if role == Qt.CheckStateRole and index.column() == 0:
@@ -980,6 +1010,10 @@ class BitFlagModel(QAbstractItemModel):
             if role == Qt.EditRole:
                 if cName == self.cnName:
                     item.setName(str(value))
+                    result = True
+
+                if cName == self.cnColor:
+                    item.setZValue(int(value))
                     result = True
 
                 if cName == self.cnBitPosition:
@@ -1157,7 +1191,7 @@ class BitFlagRendererWidget(QgsRasterRendererWidget):
 
     def adjustColumnSizes(self, *args):
 
-        for i, c in enumerate(self.mFlagModel.columnNames()):
+        for i, c in enumerate(self.mFlagModel.mColumnNames):
             if c != self.mFlagModel.cnName:
                 self.mTreeView.resizeColumnToContents(i)
 
@@ -1490,7 +1524,7 @@ class BitFlagRenderer(QgsSingleBandGrayRenderer):
         # block_data[b, :] = band_data
 
         parameterNumbers = np.zeros(band_data.shape, dtype=np.uint8)
-        for i, flagParameter in enumerate(reversed(self.bitFlagScheme())):
+        for i, flagParameter in enumerate(sorted(self.bitFlagScheme(), key=lambda fp: (fp.zValue(), fp.firstBit()))):
             b0 = flagParameter.firstBit()
 
             # extract the parameter number

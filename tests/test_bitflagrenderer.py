@@ -110,7 +110,6 @@ class BitFlagRendererTests(TestCase):
 
         self.showGui(tv)
 
-
     def test_BitFlagRendererWidget(self):
 
         lyr = self.bitFlagLayer()
