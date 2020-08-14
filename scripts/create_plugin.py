@@ -120,7 +120,9 @@ def create_plugin():
     # copy python and other resource files
     pattern = re.compile(r'\.(py|svg|png|txt|ui|tif|qml|md|js|css)$')
     files = list(scantree(DIR_REPO / 'bitflagrenderer', pattern=pattern))
+    files.extend(list(scantree(DIR_REPO / 'exampledata', pattern=pattern)))
     files.append(DIR_REPO / '__init__.py')
+    files.append(DIR_REPO / 'ABOUT.html')
     files.append(DIR_REPO / 'CHANGELOG.rst')
     files.append(DIR_REPO / 'LICENSE.md')
     files.append(DIR_REPO / 'LICENSE.html')

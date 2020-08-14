@@ -14,9 +14,10 @@
 ***************************************************************************/
 """
 
-import pathlib, os
+import os
+import pathlib
 
-__version__ = '0.3'
+__version__ = '0.4'
 TITLE = 'Bit Flag Renderer'
 AUTHOR = 'Benjamin Jakimow'
 MAIL = 'benjamin.jakimow@geo.hu-berlin.de'
@@ -37,7 +38,7 @@ DIR_EXAMPLE_DATA = DIR_REPO / 'exampledata'
 DIR_BITFLAG_SCHEMES = DIR_REPO / 'bitflagschemes'
 DIR_ICONS = DIR_REPO / 'bitflagrenderer' / 'icons'
 
-PATH_CHANGELOG = DIR_REPO / 'CHANGELOG'
+PATH_CHANGELOG = DIR_REPO / 'CHANGELOG.rst'
 PATH_LICENSE = DIR_REPO / 'LICENSE.md'
 PATH_ABOUT = DIR_REPO / 'ABOUT.html'
 

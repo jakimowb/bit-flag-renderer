@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>486</width>
+    <width>361</width>
     <height>334</height>
    </rect>
   </property>
@@ -78,7 +78,7 @@
            <string>-</string>
           </property>
           <property name="icon">
-           <iconset>
+           <iconset resource="../../QGIS/images/images.qrc">
             <normaloff>:/images/themes/default/mActionRemove.svg</normaloff>:/images/themes/default/mActionRemove.svg</iconset>
           </property>
           <property name="autoRaise">
@@ -92,11 +92,43 @@
            <string>+</string>
           </property>
           <property name="icon">
-           <iconset>
+           <iconset resource="../../QGIS/images/images.qrc">
             <normaloff>:/images/themes/default/mActionAdd.svg</normaloff>:/images/themes/default/mActionAdd.svg</iconset>
           </property>
           <property name="autoRaise">
            <bool>true</bool>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QToolButton" name="btnCombineFlags">
+          <property name="text">
+           <string>+</string>
+          </property>
+          <property name="icon">
+           <iconset resource="../../QGIS/images/images.qrc">
+            <normaloff>:/images/themes/default/mIconConnect.svg</normaloff>:/images/themes/default/mIconConnect.svg</iconset>
+          </property>
+          <property name="autoRaise">
+           <bool>true</bool>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QgsColorButton" name="btnCombinedFlagsColor">
+          <property name="color">
+           <color>
+            <red>170</red>
+            <green>170</green>
+            <blue>0</blue>
+           </color>
+          </property>
+          <property name="defaultColor">
+           <color>
+            <red>170</red>
+            <green>170</green>
+            <blue>0</blue>
+           </color>
           </property>
          </widget>
         </item>
@@ -119,7 +151,7 @@
            <string>...</string>
           </property>
           <property name="icon">
-           <iconset>
+           <iconset resource="../../QGIS/images/images.qrc">
             <normaloff>:/images/themes/default/mActionFileSave.svg</normaloff>:/images/themes/default/mActionFileSave.svg</iconset>
           </property>
           <property name="autoRaise">
@@ -133,46 +165,13 @@
            <string>...</string>
           </property>
           <property name="icon">
-           <iconset>
+           <iconset resource="../../QGIS/images/images.qrc">
             <normaloff>:/images/themes/default/mActionFileOpen.svg</normaloff>:/images/themes/default/mActionFileOpen.svg</iconset>
           </property>
           <property name="autoRaise">
            <bool>true</bool>
           </property>
          </widget>
-        </item>
-       </layout>
-      </item>
-      <item>
-       <layout class="QHBoxLayout" name="horizontalLayout_2">
-        <property name="spacing">
-         <number>2</number>
-        </property>
-        <property name="topMargin">
-         <number>0</number>
-        </property>
-        <item>
-         <widget class="QCheckBox" name="cbCombine">
-          <property name="text">
-           <string>combine flags</string>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QgsColorButton" name="btCombinedFlagsColor"/>
-        </item>
-        <item>
-         <spacer name="horizontalSpacer_3">
-          <property name="orientation">
-           <enum>Qt::Horizontal</enum>
-          </property>
-          <property name="sizeHint" stdset="0">
-           <size>
-            <width>40</width>
-            <height>20</height>
-           </size>
-          </property>
-         </spacer>
         </item>
        </layout>
       </item>
@@ -242,7 +241,7 @@
   </layout>
   <action name="actionAddParameter">
    <property name="icon">
-    <iconset>
+    <iconset resource="../../QGIS/images/images.qrc">
      <normaloff>:/images/themes/default/mActionAdd.svg</normaloff>:/images/themes/default/mActionAdd.svg</iconset>
    </property>
    <property name="text">
@@ -254,7 +253,7 @@
   </action>
   <action name="actionRemoveParameters">
    <property name="icon">
-    <iconset>
+    <iconset resource="../../QGIS/images/images.qrc">
      <normaloff>:/images/themes/default/mActionRemove.svg</normaloff>:/images/themes/default/mActionRemove.svg</iconset>
    </property>
    <property name="text">
@@ -266,7 +265,7 @@
   </action>
   <action name="actionLoadBitFlagScheme">
    <property name="icon">
-    <iconset>
+    <iconset resource="../../QGIS/images/images.qrc">
      <normaloff>:/images/themes/default/mActionFileOpen.svg</normaloff>:/images/themes/default/mActionFileOpen.svg</iconset>
    </property>
    <property name="text">
@@ -278,7 +277,7 @@
   </action>
   <action name="actionSaveBitFlagScheme">
    <property name="icon">
-    <iconset>
+    <iconset resource="../../QGIS/images/images.qrc">
      <normaloff>:/images/themes/default/mActionFileSave.svg</normaloff>:/images/themes/default/mActionFileSave.svg</iconset>
    </property>
    <property name="text">
@@ -286,6 +285,21 @@
    </property>
    <property name="toolTip">
     <string>Saves the current Bit Flag Scheme</string>
+   </property>
+  </action>
+  <action name="actionCombineFlags">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="icon">
+    <iconset resource="../../QGIS/images/images.qrc">
+     <normaloff>:/images/themes/default/mIconConnect.svg</normaloff>:/images/themes/default/mIconConnect.svg</iconset>
+   </property>
+   <property name="text">
+    <string>Combine Flags</string>
+   </property>
+   <property name="toolTip">
+    <string>Activate to combine all selected flags states and show them with unified color</string>
    </property>
   </action>
  </widget>
@@ -316,6 +330,7 @@
   <include location="../../../../QGIS/images/images.qrc"/>
   <include location="../qpsbitflagrenderer.qrc"/>
   <include location="../../../QGIS/images/images.qrc"/>
+  <include location="../../QGIS/images/images.qrc"/>
  </resources>
  <connections/>
 </ui>

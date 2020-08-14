@@ -419,6 +419,9 @@ class BitFlagState(object):
         else:
             return self.mBitShift < other.mBitShift
 
+    def __repr__(self) -> str:
+        info = f'{self.name()}-{self.bitNumber()}'
+        return super().__repr__() + info
 
 class BitFlagParameter(object):
     """
@@ -432,7 +435,7 @@ class BitFlagParameter(object):
             return None
 
         name = element.attribute('name')
-        zValue = int(element.attribute('z'))
+        zValue = int(element.attribute('z', '1'))
         firstBit = int(element.attribute('firstBit'))
         bitCount = int(element.attribute('bitCount'))
 
@@ -527,7 +530,7 @@ class BitFlagParameter(object):
 
     def __repr__(self) -> str:
         info = ': {}-{}, "{}"'.format(self.mStartBit, self.mBitSize, self.mName)
-        return super(BitFlagParameter, self).__repr__() + info
+        return super().__repr__() + info
 
     def setBitSize(self, bitSize: int):
         assert isinstance(bitSize, int) and bitSize >= 1
@@ -931,6 +934,9 @@ class BitFlagModel(QAbstractItemModel):
         if isinstance(item, BitFlagState):
 
             if role in [Qt.DisplayRole, Qt.EditRole]:
+                if cName == self.cnBitPosition:
+                    return item.bitNumber()
+
                 if cName == self.cnBitNum:
                     return item.bitNumber()
 
@@ -1108,13 +1114,19 @@ class BitFlagRendererTreeView(QTreeView):
 
         if bool(self.model().flags(cidx) & Qt.ItemIsEditable):
             a = m.addAction('Edit')
-            a.triggered.connect(lambda *args, idx=cidx: self.edit(idx))
+            a.triggered.connect(lambda *args, idx=cidx: self.onEditRequest(idx))
 
         if cname == flagModel.cnColor and isinstance(cidx.data(role=Qt.UserRole), BitFlagState):
             a = m.addAction('Set Color')
             a.triggered.connect(lambda *args, idx=cidx: self.showColorDialog(idx))
 
         return m
+
+    def onEditRequest(self, idx: QModelIndex):
+        #print(f'{idx} {idx.row()} {idx.column()} {idx.isValid()}')
+        #print(idx.data(role=Qt.UserRole))
+        self.setCurrentIndex(idx)
+        self.edit(idx)
 
     def contextMenuEvent(self, event: QContextMenuEvent) -> None:
         """
@@ -1154,19 +1166,21 @@ class BitFlagRendererWidget(QgsRasterRendererWidget):
         self.mProxyModel = BitFlagSortFilterProxyModel()
         self.mProxyModel.setSourceModel(self.mFlagModel)
         self.mTreeView.setModel(self.mProxyModel)
-
+        self.mTreeView.header().setSectionResizeMode(0, QHeaderView.ResizeToContents)
+        self.mTreeView.header().setSectionResizeMode(1, QHeaderView.Interactive)
+        self.mTreeView.header().setSectionResizeMode(2, QHeaderView.ResizeToContents)
+        self.mTreeView.header().setSectionResizeMode(3, QHeaderView.ResizeToContents)
         self.setRasterLayer(layer)
 
-        self.mFlagModel.rowsInserted.connect(self.adjustColumnSizes)
-        self.mFlagModel.rowsRemoved.connect(self.adjustColumnSizes)
+        #self.mFlagModel.rowsInserted.connect(self.adjustColumnSizes)
+        #self.mFlagModel.rowsRemoved.connect(self.adjustColumnSizes)
         self.mFlagModel.dataChanged.connect(self.widgetChanged.emit)
         self.mFlagModel.rowsInserted.connect(self.widgetChanged.emit)
         self.mFlagModel.rowsRemoved.connect(self.widgetChanged.emit)
 
         self.mTreeView.selectionModel().selectionChanged.connect(self.onSelectionChanged)
 
-        self.mTreeView.header().setSectionResizeMode(QHeaderView.Interactive)
-        self.adjustColumnSizes()
+        #self.adjustColumnSizes()
 
         self.restoreTreeViewState()
 
@@ -1182,6 +1196,15 @@ class BitFlagRendererWidget(QgsRasterRendererWidget):
         self.btnRemoveFlags.setDefaultAction(self.actionRemoveParameters)
         self.btnSaveBitFlagScheme.setDefaultAction(self.actionSaveBitFlagScheme)
         self.btnLoadBitFlagScheme.setDefaultAction(self.actionLoadBitFlagScheme)
+
+        self.btnCombineFlags.setDefaultAction(self.actionCombineFlags)
+        self.btnCombinedFlagsColor.setEnabled(self.actionCombineFlags.isChecked())
+        self.actionCombineFlags.toggled.connect(self.btnCombinedFlagsColor.setEnabled)
+
+        if True:
+            self.btnCombineFlags.setVisible(False)
+            self.btnCombinedFlagsColor.setVisible(False)
+
         self.updateWidgets()
 
     def saveBitFlagScheme(self):
@@ -1224,7 +1247,7 @@ class BitFlagRendererWidget(QgsRasterRendererWidget):
                     self.mTreeView.setExpanded(idxP, item.mIsExpanded)
 
             self.mTreeView.setUpdatesEnabled(True)
-            self.adjustColumnSizes()
+            #self.adjustColumnSizes()
             self.widgetChanged.emit()
 
     def bitFlagScheme(self) -> BitFlagScheme:
