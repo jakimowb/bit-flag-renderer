@@ -286,8 +286,8 @@ class AboutBitFlagRenderer(QDialog):
         self.setAboutTitle()
 
         # page About
-        from bitflagrenderer import PATH_LICENSE, VERSION, PATH_CHANGELOG, PATH_ABOUT
-        self.labelVersion.setText('{}'.format(VERSION))
+        from bitflagrenderer import PATH_LICENSE, __version__, PATH_CHANGELOG, PATH_ABOUT
+        self.labelVersion.setText('{}'.format(__version__))
 
         def readTextFile(path: str):
             with open(path, encoding='utf-8') as f:

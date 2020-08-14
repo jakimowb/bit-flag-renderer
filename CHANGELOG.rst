@@ -1,6 +1,17 @@
 Changelog
 =========
 
+Version 0.4
+-----------
+
+- changed group checkbox selection behaviour: selecting the entire Bit Flag Group will select all
+  BitFlagStates except the 1st = empty flag (closes #6)
+- added context menu, e.g. to edit bit flag states and colors
+- added Landsat Level-2 pixel_qa scheme (closes #10)
+- fixed double click edit options (closes #4)
+- fixed initial visibility for bit flag states loaded from XML (closes #8)
+
+
 Version 0.3
 -----------
 

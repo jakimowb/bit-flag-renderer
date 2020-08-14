@@ -23,10 +23,10 @@ from os.path import join as jp
 import git
 from docutils.core import publish_string
 from pb_tool import pb_tool
-from qps.make.make import compileResourceFile
+from qps.resources import compileResourceFile
 from qps.utils import file_search, zipdir
-
-from bitflagrenderer import DIR_REPO, PATH_ABOUT, PATH_CHANGELOG, VERSION, PATH_LICENSE, URL_ISSUE_TRACKER
+from qps.make.deploy import QGISMetadataFileWriter
+from bitflagrenderer import DIR_REPO, PATH_ABOUT, PATH_CHANGELOG, __version__, PATH_LICENSE, URL_ISSUE_TRACKER
 
 DIR_BUILD = DIR_REPO / 'build'
 DIR_DOC_SOURCE = DIR_REPO / 'doc' / 'source'
@@ -35,15 +35,16 @@ PATH_CFG = DIR_REPO / 'pb_tool.cfg'
 PATH_METADATA = DIR_REPO / 'metadata.txt'
 
 
-QGIS_MIN = '3.8'
+QGIS_MIN = '3.14'
 QGIS_MAX = '3.99'
 
 REPO = git.Repo(DIR_REPO)
 currentBranch = REPO.active_branch.name
 timestamp = re.sub(r'[- :]', '', datetime.datetime.now().isoformat())[0:13]
-buildID = '{}.{}.{}'.format(re.search(r'(\.?[^.]*){2}', VERSION).group()
+buildID = '{}.{}.{}'.format(re.search(r'(\.?[^.]*){2}', __version__).group()
                             , timestamp,
                             re.sub(r'[\\/]', '_', currentBranch))
+
 
 def rm(p):
     """
@@ -54,6 +55,7 @@ def rm(p):
         os.remove(p)
     elif os.path.isdir(p):
         shutil.rmtree(p)
+
 
 def mkDir(d, delete=False):
     """
@@ -71,102 +73,6 @@ def compileResourceFiles():
 
     for path in file_search(DIR_REPO / 'bitflagrenderer', '*.qrc', recursive=True):
         compileResourceFile(path)
-
-
-class QGISMetadataFileWriter(object):
-
-    def __init__(self):
-        self.mName = None
-
-        self.mDescription = None
-        self.mVersion = None
-        self.mQgisMinimumVersion = '3.8'
-        self.mQgisMaximumVersion = '3.99'
-        self.mAuthor = None
-        self.mAbout = None
-        self.mEmail = None
-        self.mHomepage = None
-        self.mIcon = None
-        self.mTracker = None
-        self.mRepository = None
-        self.mIsExperimental = False
-        self.mTags = None
-        self.mCategory = None
-        self.mChangelog = ''
-
-    def validate(self)->bool:
-
-        return True
-
-    def metadataString(self)->str:
-        assert self.validate()
-
-        lines = ['[general]']
-        lines.append('name={}'.format(self.mName))
-        lines.append('author={}'.format(self.mAuthor))
-        if self.mEmail:
-            lines.append('email={}'.format(self.mEmail))
-
-        lines.append('description={}'.format(self.mDescription))
-        lines.append('version={}'.format(self.mVersion))
-        lines.append('qgisMinimumVersion={}'.format(self.mQgisMinimumVersion))
-        lines.append('qgisMaximumVersion={}'.format(self.mQgisMaximumVersion))
-        lines.append('about={}'.format(re.sub('\n', '', self.mAbout)))
-
-        lines.append('icon={}'.format(self.mIcon))
-
-        lines.append('tags={}'.format(', '.join(self.mTags)))
-        lines.append('category={}'.format(self.mRepository))
-
-        lines.append('homepage={}'.format(self.mHomepage))
-        if self.mTracker:
-            lines.append('tracker={}'.format(self.mTracker))
-        if self.mRepository:
-            lines.append('repository={}'.format(self.mRepository))
-        if isinstance(self.mIsExperimental, bool):
-            lines.append('experimental={}'.format(self.mIsExperimental))
-
-
-        # lines.append('deprecated={}'.format(self.mIsDeprecated))
-        lines.append('')
-        lines.append('changelog={}'.format(self.mChangelog))
-
-        return '\n'.join(lines)
-    """
-    [general]
-    name=dummy
-    description=dummy
-    version=dummy
-    qgisMinimumVersion=dummy
-    qgisMaximumVersion=dummy
-    author=dummy
-    about=dummy
-    email=dummy
-    icon=dummy
-    homepage=dummy
-    tracker=dummy
-    repository=dummy
-    experimental=False
-    deprecated=False
-    tags=remote sensing, raster, time series, data cube, landsat, sentinel
-    category=Raster
-    """
-
-    def writeMetadataTxt(self, path:str):
-        with open(path, 'w', encoding='utf-8') as f:
-            f.write(self.metadataString())
-        # read again and run checks
-        import pyplugin_installer.installer_data
-
-        # test if we could read the plugin
-        import pyplugin_installer.installer_data
-        P = pyplugin_installer.installer_data.Plugins()
-        plugin = P.getInstalledPlugin(self.mName, os.path.dirname(path), True)
-
-        #if hasattr(pyplugin_installer.installer_data, 'errorDetails'):
-        #    raise Exception('plugin structure/metadata error:\n{}'.format(pyplugin_installer.installer_data.errorDetails))
-        s = ""
-
 
 
 def updateSphinxChangelog():
@@ -222,6 +128,7 @@ def updateInfoHTMLs():
     txt = publish_string(txt, writer_name='html').decode('utf-8')
     pathLicenseHtml = os.path.splitext(PATH_LICENSE)[0]+'.html'
     doUpdate(pathLicenseHtml, txt)
+
 
 def build():
     # local pb_tool configuration file.
