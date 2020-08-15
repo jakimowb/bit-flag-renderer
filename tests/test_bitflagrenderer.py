@@ -18,33 +18,31 @@ import unittest
 
 from qps.testing import initQgisApplication
 
-#from qgis.testing import start_app
-#QAPP = start_app()
-#QAPP.setPkgDataPath(re.sub(r'/\.$', '/Library', QAPP.pkgDataPath()))
-QAPP = initQgisApplication()
+# from qgis.testing import start_app
+# QAPP = start_app()
+# QAPP.setPkgDataPath(re.sub(r'/\.$', '/Library', QAPP.pkgDataPath()))
+
 from qps.utils import file_search
 from qps.testing import TestObjects, TestCase
 from bitflagrenderer.bitflagrenderer import *
 
-
-
 from bitflagrenderer import DIR_EXAMPLE_DATA, DIR_REPO
+
 pathFlagImage = list(file_search(DIR_EXAMPLE_DATA, re.compile(r'.*BQA.*\.tif$')))[0]
 pathTOAImage = list(file_search(DIR_EXAMPLE_DATA, re.compile(r'.*TOA.*\.tif$')))[0]
-
 
 DIR_TMP = DIR_REPO / 'tmp'
 os.makedirs(DIR_TMP, exist_ok=True)
 
+
 class BitFlagRendererTests(TestCase):
 
-
-    def bitFlagLayer(self)->QgsRasterLayer:
+    def bitFlagLayer(self) -> QgsRasterLayer:
         lyr = QgsRasterLayer(pathFlagImage)
         lyr.setName('Flag Image')
         return lyr
 
-    def createBitFlagParameters(self)->typing.List[BitFlagParameter]:
+    def createBitFlagParameters(self) -> typing.List[BitFlagParameter]:
         parValid = BitFlagParameter('Valid data', 0)
         self.assertIsInstance(parValid, BitFlagParameter)
         self.assertEqual(len(parValid), 2)
@@ -65,7 +63,7 @@ class BitFlagRendererTests(TestCase):
 
         return [parValid, parCloudState]
 
-    def createBitFlagScheme(self)->BitFlagScheme:
+    def createBitFlagScheme(self) -> BitFlagScheme:
 
         scheme = BitFlagScheme(name='test scheme')
         scheme.mParameters.extend(self.createBitFlagParameters())
@@ -81,7 +79,6 @@ class BitFlagRendererTests(TestCase):
         #           11 = 3 = cirrus
         # define
 
-
         flagPar = BitFlagParameter('test', 2, 3)
         self.assertIsInstance(flagPar, BitFlagParameter)
         self.assertEqual(len(flagPar), 8)
@@ -89,7 +86,6 @@ class BitFlagRendererTests(TestCase):
         self.assertEqual(len(flagPar), 4)
         flagPar.setBitSize(3)
         self.assertEqual(len(flagPar), 8)
-
 
         flagModel = BitFlagModel()
         tv = QTreeView()
@@ -99,7 +95,7 @@ class BitFlagRendererTests(TestCase):
         flagParameters = self.createBitFlagParameters()
         for i, par in enumerate(flagParameters):
             flagModel.addFlagParameter(par)
-            self.assertEqual(len(flagModel), i+1)
+            self.assertEqual(len(flagModel), i + 1)
             self.assertIsInstance(flagModel[i], BitFlagParameter)
             self.assertIsInstance(flagModel[i][0], BitFlagState)
             self.assertEqual(flagModel[i], par)
@@ -127,12 +123,10 @@ class BitFlagRendererTests(TestCase):
 
         w = BitFlagRendererWidget(lyr, lyr.extent())
 
-
         btnReAdd = QPushButton('Re-Add')
-        btnReAdd.clicked.connect(lambda : w.setRasterLayer(w.rasterLayer()))
+        btnReAdd.clicked.connect(lambda: w.setRasterLayer(w.rasterLayer()))
 
         def onWidgetChanged(w, lyr):
-
             renderer = w.renderer()
             renderer.setInput(lyr.dataProvider())
             lyr.setRenderer(renderer)
@@ -142,7 +136,6 @@ class BitFlagRendererTests(TestCase):
 
         for p in self.createBitFlagParameters():
             w.mFlagModel.addFlagParameter(p)
-
 
         top = QWidget()
         top.setLayout(QHBoxLayout())
@@ -156,7 +149,6 @@ class BitFlagRendererTests(TestCase):
         w.saveTreeViewState()
 
         self.showGui(top)
-
 
     def test_BitFlagSchemes(self):
 
@@ -210,11 +202,9 @@ class BitFlagRendererTests(TestCase):
         renderer.setBitFlagScheme(scheme)
         lyr.setRenderer(renderer)
 
-
         self.assertEqual(scheme, renderer.bitFlagScheme())
         self.assertListEqual(scheme.mParameters, renderer.bitFlagScheme().mParameters)
         colorBlock = renderer.block(0, lyr.extent(), 200, 200)
-
 
         r2 = renderer.clone()
         self.assertIsInstance(r2, BitFlagRenderer)
@@ -272,7 +262,6 @@ class BitFlagRendererTests(TestCase):
 
         self.showGui(d)
 
-
     def test_Plugin(self):
 
         pluginDir = DIR_REPO.as_posix()
@@ -318,6 +307,7 @@ class BitFlagRendererTests(TestCase):
         cw = w.currentRenderWidget().renderer().type()
 
         self.showGui(w)
+
 
 if __name__ == '__main__':
     unittest.main()
