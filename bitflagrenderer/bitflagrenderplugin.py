@@ -14,19 +14,19 @@
 ***************************************************************************/
 """
 
-import os, sys, site
-from qgis.core import *
-from qgis.gui import *
-from qgis.PyQt.QtCore import *
-from qgis.PyQt.QtWidgets import *
+import os
+import sys
+import copy
 from qgis.PyQt.QtGui import *
-
+from qgis.PyQt.QtWidgets import *
+from qgis.core import QgsProject
+from qgis.gui import QgsMapCanvas, QgisInterface
 
 
 class BitFlagRendererPlugin(object):
 
-    def __init__(self, iface:QgisInterface):
-        self.iface = iface
+    def __init__(self, iface: QgisInterface):
+        self.iface: QgisInterface = iface
         self.mFactory = None
 
         from bitflagrenderer import TITLE
@@ -38,9 +38,11 @@ class BitFlagRendererPlugin(object):
         if not pluginDir in sys.path:
             sys.path.append(pluginDir)
 
+        from bitflagrenderer.bitflagrenderer_rc import qInitResources
+        qInitResources()
+
         from bitflagrenderer.bitflagrenderer import registerConfigWidgetFactory
         registerConfigWidgetFactory()
-
 
         self.mAboutAction = QAction(QIcon(':/images/themes/default/mActionPropertiesWidget.svg'), 'About')
         self.mAboutAction.triggered.connect(self.onAboutAction)
@@ -80,7 +82,6 @@ class BitFlagRendererPlugin(object):
             scheme[4][3].setVisible(True)
 
             r = BitFlagRenderer(lyrBQA.dataProvider())
-            import copy
             r.setBitFlagScheme(copy.deepcopy(scheme))
             lyrBQA.setRenderer(r)
 
@@ -90,11 +91,9 @@ class BitFlagRendererPlugin(object):
             canvas.setDestinationCrs(lyrBQA.crs())
             canvas.setExtent(lyrBQA.extent())
 
-            s = ""
-
-
-
     def unload(self):
+        self.iface.removePluginRasterMenu(self.mMenuName, self.mLoadExample)
+        self.iface.removePluginRasterMenu(self.mMenuName, self.mAboutAction)
         from bitflagrenderer.bitflagrenderer import unregisterConfigWidgetFactory
         unregisterConfigWidgetFactory()
 

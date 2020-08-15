@@ -14,22 +14,32 @@
 ***************************************************************************/
 """
 
-import sys, os, re, pathlib, pickle, typing, enum, copy, bisect, io, json, enum, collections
-from qgis.core import *
+import bisect
+import collections
+import copy
+import enum
+import io
+import os
+import pathlib
+import pickle
+import re
+import sys
+import typing
+
+import numpy as np
+from osgeo import gdal
+
+import qgis.utils
+from bitflagrenderer import DIR_BITFLAG_SCHEMES
+from qgis.PyQt import uic
+from qgis.PyQt.QtCore import *
+from qgis.PyQt.QtGui import *
+from qgis.PyQt.QtWidgets import *
+from qgis.PyQt.QtXml import *
 from qgis.core import QgsRasterLayer, QgsRasterRenderer, QgsRasterTransparency, Qgis, \
     QgsRectangle, QgsSingleBandGrayRenderer, QgsRasterBlock, QgsRasterBlockFeedback
-from qgis.gui import *
 from qgis.gui import QgsMapLayerConfigWidget, QgsMapCanvas, QgsRasterRendererWidget, \
     QgsMapLayerConfigWidgetFactory, QgsColorDialog, QgsFileWidget, QgisInterface
-import qgis.utils
-from qgis.PyQt.QtCore import *
-from qgis.PyQt.QtWidgets import *
-from qgis.PyQt.QtGui import *
-from qgis.PyQt.QtXml import *
-from qgis.PyQt import uic
-from osgeo import gdal
-import numpy as np
-from bitflagrenderer import DIR_BITFLAG_SCHEMES, DIR_EXAMPLE_DATA
 
 PATH_UI = os.path.join(os.path.dirname(__file__), 'bitflagrenderer.ui')
 PATH_ABOUT_UI = os.path.join(os.path.dirname(__file__), 'aboutdialog.ui')
@@ -934,8 +944,8 @@ class BitFlagModel(QAbstractItemModel):
         if isinstance(item, BitFlagState):
 
             if role in [Qt.DisplayRole, Qt.EditRole]:
-                if cName == self.cnBitPosition:
-                    return item.bitNumber()
+                #if cName == self.cnBitPosition:
+                #    return item.bitNumber()
 
                 if cName == self.cnBitNum:
                     return item.bitNumber()
@@ -1657,7 +1667,6 @@ def registerConfigWidgetFactory():
     if not isinstance(FACTORY, BitFlagLayerConfigWidgetFactory):
         FACTORY = BitFlagLayerConfigWidgetFactory()
         qgis.utils.iface.registerMapLayerConfigWidgetFactory(FACTORY)
-
 
 def unregisterConfigWidgetFactory():
     global FACTORY
