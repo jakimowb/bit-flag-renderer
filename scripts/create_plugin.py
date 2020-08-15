@@ -50,7 +50,7 @@ with open(PATH_ABOUT, 'r', encoding='utf-8') as f:
     aboutText = ''.join(aboutText)
 
 MD = QGISMetadataFileWriter()
-MD.mName = 'Virtual Raster Builder'
+MD.mName = 'Bit Flag Renderer'
 MD.mDescription = bitflagrenderer.DESCRIPTION
 MD.mTags = ['Raster']
 MD.mCategory = 'Analysis'
