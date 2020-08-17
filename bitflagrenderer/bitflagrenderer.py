@@ -1271,6 +1271,7 @@ class BitFlagRendererWidget(QgsRasterRendererWidget):
 
         rows = self.mProxyModel.rowCount()
         isExpanded = [self.treeView().isExpanded(self.mProxyModel.index(row, 0)) for row in range(rows)]
+        gbIsCollapsed = self.mGroupBox.isCollapsed()
         columnWidths = [self.treeView().columnWidth(i) for i in range(self.treeView().model().columnCount())]
         state = {'state': self.treeView().state(),
                  'sortColumn': self.mProxyModel.sortColumn(),

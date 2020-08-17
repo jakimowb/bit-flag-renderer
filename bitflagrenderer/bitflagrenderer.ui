@@ -51,6 +51,9 @@
      <property name="title">
       <string>Flags</string>
      </property>
+     <property name="saveCollapsedState">
+      <bool>true</bool>
+     </property>
      <layout class="QVBoxLayout" name="verticalLayout">
       <property name="spacing">
        <number>2</number>
@@ -78,7 +81,7 @@
            <string>-</string>
           </property>
           <property name="icon">
-           <iconset resource="../../QGIS/images/images.qrc">
+           <iconset resource="../../../QGIS/images/images.qrc">
             <normaloff>:/images/themes/default/mActionRemove.svg</normaloff>:/images/themes/default/mActionRemove.svg</iconset>
           </property>
           <property name="autoRaise">
@@ -92,7 +95,7 @@
            <string>+</string>
           </property>
           <property name="icon">
-           <iconset resource="../../QGIS/images/images.qrc">
+           <iconset resource="../../../QGIS/images/images.qrc">
             <normaloff>:/images/themes/default/mActionAdd.svg</normaloff>:/images/themes/default/mActionAdd.svg</iconset>
           </property>
           <property name="autoRaise">
@@ -106,7 +109,7 @@
            <string>+</string>
           </property>
           <property name="icon">
-           <iconset resource="../../QGIS/images/images.qrc">
+           <iconset resource="../../../QGIS/images/images.qrc">
             <normaloff>:/images/themes/default/mIconConnect.svg</normaloff>:/images/themes/default/mIconConnect.svg</iconset>
           </property>
           <property name="autoRaise">
@@ -151,7 +154,7 @@
            <string>...</string>
           </property>
           <property name="icon">
-           <iconset resource="../../QGIS/images/images.qrc">
+           <iconset resource="../../../QGIS/images/images.qrc">
             <normaloff>:/images/themes/default/mActionFileSave.svg</normaloff>:/images/themes/default/mActionFileSave.svg</iconset>
           </property>
           <property name="autoRaise">
@@ -165,7 +168,7 @@
            <string>...</string>
           </property>
           <property name="icon">
-           <iconset resource="../../QGIS/images/images.qrc">
+           <iconset resource="../../../QGIS/images/images.qrc">
             <normaloff>:/images/themes/default/mActionFileOpen.svg</normaloff>:/images/themes/default/mActionFileOpen.svg</iconset>
           </property>
           <property name="autoRaise">
@@ -174,46 +177,6 @@
          </widget>
         </item>
        </layout>
-      </item>
-      <item>
-       <widget class="BitFlagRendererTreeView" name="mTreeView">
-        <property name="sizePolicy">
-         <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-          <horstretch>0</horstretch>
-          <verstretch>1</verstretch>
-         </sizepolicy>
-        </property>
-        <property name="styleSheet">
-         <string notr="true"/>
-        </property>
-        <property name="sizeAdjustPolicy">
-         <enum>QAbstractScrollArea::AdjustIgnored</enum>
-        </property>
-        <property name="alternatingRowColors">
-         <bool>false</bool>
-        </property>
-        <property name="autoExpandDelay">
-         <number>-1</number>
-        </property>
-        <property name="rootIsDecorated">
-         <bool>true</bool>
-        </property>
-        <property name="uniformRowHeights">
-         <bool>true</bool>
-        </property>
-        <property name="sortingEnabled">
-         <bool>true</bool>
-        </property>
-        <property name="headerHidden">
-         <bool>false</bool>
-        </property>
-        <attribute name="headerMinimumSectionSize">
-         <number>10</number>
-        </attribute>
-        <attribute name="headerDefaultSectionSize">
-         <number>25</number>
-        </attribute>
-       </widget>
       </item>
      </layout>
     </widget>
@@ -241,7 +204,7 @@
   </layout>
   <action name="actionAddParameter">
    <property name="icon">
-    <iconset resource="../../QGIS/images/images.qrc">
+    <iconset resource="../../../QGIS/images/images.qrc">
      <normaloff>:/images/themes/default/mActionAdd.svg</normaloff>:/images/themes/default/mActionAdd.svg</iconset>
    </property>
    <property name="text">
@@ -253,7 +216,7 @@
   </action>
   <action name="actionRemoveParameters">
    <property name="icon">
-    <iconset resource="../../QGIS/images/images.qrc">
+    <iconset resource="../../../QGIS/images/images.qrc">
      <normaloff>:/images/themes/default/mActionRemove.svg</normaloff>:/images/themes/default/mActionRemove.svg</iconset>
    </property>
    <property name="text">
@@ -265,7 +228,7 @@
   </action>
   <action name="actionLoadBitFlagScheme">
    <property name="icon">
-    <iconset resource="../../QGIS/images/images.qrc">
+    <iconset resource="../../../QGIS/images/images.qrc">
      <normaloff>:/images/themes/default/mActionFileOpen.svg</normaloff>:/images/themes/default/mActionFileOpen.svg</iconset>
    </property>
    <property name="text">
@@ -277,7 +240,7 @@
   </action>
   <action name="actionSaveBitFlagScheme">
    <property name="icon">
-    <iconset resource="../../QGIS/images/images.qrc">
+    <iconset resource="../../../QGIS/images/images.qrc">
      <normaloff>:/images/themes/default/mActionFileSave.svg</normaloff>:/images/themes/default/mActionFileSave.svg</iconset>
    </property>
    <property name="text">
@@ -292,7 +255,7 @@
     <bool>true</bool>
    </property>
    <property name="icon">
-    <iconset resource="../../QGIS/images/images.qrc">
+    <iconset resource="../../../QGIS/images/images.qrc">
      <normaloff>:/images/themes/default/mIconConnect.svg</normaloff>:/images/themes/default/mIconConnect.svg</iconset>
    </property>
    <property name="text">
@@ -319,11 +282,6 @@
    <class>QgsRasterBandComboBox</class>
    <extends>QComboBox</extends>
    <header>qgsrasterbandcombobox.h</header>
-  </customwidget>
-  <customwidget>
-   <class>BitFlagRendererTreeView</class>
-   <extends>QTreeView</extends>
-   <header>bitflagrenderer.bitflagrenderer</header>
   </customwidget>
  </customwidgets>
  <resources>
