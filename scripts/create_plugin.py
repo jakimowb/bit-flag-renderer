@@ -121,6 +121,7 @@ def create_plugin():
     pattern = re.compile(r'\.(py|svg|png|txt|ui|tif|qml|md|js|css)$')
     files = list(scantree(DIR_REPO / 'bitflagrenderer', pattern=pattern))
     files.extend(list(scantree(DIR_REPO / 'exampledata', pattern=pattern)))
+    files.extend(list(scantree(DIR_REPO / 'bitflagschemes', pattern=re.compile(r'\.xml$'))))
     files.append(DIR_REPO / '__init__.py')
     files.append(DIR_REPO / 'ABOUT.html')
     files.append(DIR_REPO / 'CHANGELOG.rst')
