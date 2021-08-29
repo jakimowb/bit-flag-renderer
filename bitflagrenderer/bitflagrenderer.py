@@ -89,7 +89,7 @@ class SettingsKeys(enum.Enum):
 
 FACTORY = None
 
-QGIS2NUMPY_DATA_TYPES = {Qgis.Byte: np.byte,
+QGIS2NUMPY_DATA_TYPES = {Qgis.Byte: np.uint8,
                          Qgis.UInt16: np.uint16,
                          Qgis.Int16: np.int16,
                          Qgis.UInt32: np.uint32,
