@@ -60,7 +60,7 @@ MD.mHomepage = bitflagrenderer.URL_HOMEPAGE
 MD.mAbout = aboutText
 MD.mTracker = bitflagrenderer.URL_ISSUE_TRACKER
 MD.mRepository = bitflagrenderer.URL_REPOSITORY
-MD.mQgisMinimumVersion = '3.14'
+MD.mQgisMinimumVersion = '3.20'
 MD.mEmail = 'benjamin.jakimow@geo.hu-berlin.de'
 
 PLUGIN_DIR_NAME = 'BitFlagRenderer'
