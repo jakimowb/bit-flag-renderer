@@ -31,7 +31,7 @@ from osgeo import gdal
 
 import qgis.utils
 from bitflagrenderer import DIR_BITFLAG_SCHEMES
-from qgis.PyQt import uic
+from qgis.PyQt import uic, QtXml
 from qgis.PyQt.QtCore import *
 from qgis.PyQt.QtGui import *
 from qgis.PyQt.QtWidgets import *
@@ -96,7 +96,7 @@ QGIS2NUMPY_DATA_TYPES = {Qgis.Byte: np.uint8,
                          Qgis.Int32: np.int32,
                          Qgis.Float32: np.float32,
                          Qgis.Float64: np.float64,
-                         Qgis.CFloat32: np.complex,
+                         Qgis.CFloat32: complex,
                          Qgis.CFloat64: np.complex64,
                          Qgis.ARGB32: np.uint32,
                          Qgis.ARGB32_Premultiplied: np.uint32}
@@ -1460,6 +1460,9 @@ class BitFlagRenderer(QgsSingleBandGrayRenderer):
     # def type(self)->str:
     #    return TYPE
 
+    def writeXml(self, doc: QDomDocument, parentElem: QDomElement) -> None:
+        super().writeXml(doc, parentElem)
+        s = ""
     def setBand(self, band: int):
         self.mBand = band
 
@@ -1486,26 +1489,6 @@ class BitFlagRenderer(QgsSingleBandGrayRenderer):
 
     def usesBands(self) -> typing.List[int]:
         return [self.mBand]
-
-    def writeXml(self, doc: QDomDocument, parentElem: QDomElement):
-
-        if parentElem.isNull():
-            return
-
-        domElement = doc.createElement('rasterrenderer')
-        domElement.setAttribute('type', self.type())
-        domElement.setAttribute('opacity', str(self.opacity()))
-        domElement.setAttribute('alphaBand', self.alphaBand())
-        trans = self.rasterTransparency()
-        if isinstance(trans, QgsRasterTransparency):
-            trans.writeXml(doc, domElement)
-
-        minMaxOriginElement = doc.createElement('minMaxOrigin')
-        self.minMaxOrigin().writeXml(doc, minMaxOriginElement)
-
-    def readXml(self, rendererElem: QDomElement):
-
-        pass
 
     def legendSymbologyItems(self, *args, **kwargs):
         """ Overwritten from parent class. Items for the legend. """
@@ -1584,6 +1567,8 @@ class BitFlagRenderer(QgsSingleBandGrayRenderer):
 
         return r
 
+    def type(self) -> str:
+        return 'bitflagrenderer'
 
 class BitFlagLayerConfigWidget(QgsMapLayerConfigWidget):
 
