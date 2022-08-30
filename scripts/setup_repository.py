@@ -7,10 +7,10 @@ import site
 
 DIR_REPO = pathlib.Path(__file__).parents[1].resolve()
 
+
 def install_qgisresources():
     localpath = DIR_REPO / 'qgisresources'
 
-    from qps import in
     from scripts.install_testdata import install_zipfile
     from scripts.install_testdata import URL_QGIS_RESOURCES
     install_zipfile(URL_QGIS_RESOURCES, localpath)
@@ -18,8 +18,6 @@ def install_qgisresources():
 
 def setup_enmapbox_repository():
     # specify the local path to the cloned QGIS repository
-
-
 
     DIR_SITEPACKAGES = DIR_REPO / 'site-packages'
     DIR_QGISRESOURCES = DIR_REPO / 'qgisresources'
