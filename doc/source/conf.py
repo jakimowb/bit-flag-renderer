@@ -30,50 +30,20 @@
 # import sys
 # sys.path.insert(0, os.path.abspath('.'))
 
-import os, sys, datetime
-import mock
+import datetime
+import pathlib
+import re
 
-if True:
-    MOCK_MODULES = ['qgis', 'qgis.core', 'qgis.gui', 'qgis.utils', 'numpy', 'scipy', 'osgeo', 'gdal',
-                'vrtbuilder', 'vrtbuilder.virtualrasters',
-                'qgis.PyQt', 'qgis.PyQt.Qt', 'qgis.PyQt.QtCore', 'qgis.PyQt.QtGui', 'qgis.PyQt.QtWidgets', 'qgis.PyQt.QtXml',
-                'processing', 'processing.core', 'processing.core.ProcessingConfig']
-
-    for mod_name in MOCK_MODULES:
-        sys.modules[mod_name] = mock.Mock()
-sys.path.insert(0, os.path.abspath('.'))
-sys.path.insert(0, os.path.abspath('../'))
-sys.path.insert(0, os.path.abspath('../../'))
-
-try:
-    # enable readthedocs to load git-lfs files
-    # see https://github.com/rtfd/readthedocs.org/issues/1846
-    #     https://github.com/InfinniPlatform/InfinniPlatform.readthedocs.org.en/blob/master/docs/source/conf.py#L18-L31
-    # If runs on ReadTheDocs environment
-    on_rtd = os.environ.get('READTHEDOCS', None) == 'True'
-
-    if True or on_rtd:
-        print('Fetching files with git_lfs')
-        DOC_SOURCES_DIR = os.path.dirname(os.path.abspath(__file__))
-        PROJECT_ROOT_DIR = os.path.dirname(os.path.dirname(DOC_SOURCES_DIR))
-        sys.path.insert(0, DOC_SOURCES_DIR)
-        print('PROJECT_ROOT_DIR', PROJECT_ROOT_DIR)
-
-        from git_lfs import fetch
-        fetch(PROJECT_ROOT_DIR)
-except Exception as ex:
-    print(ex)
-
-# -- Project information -----------------------------------------------------
-
-import bitflagrenderer
-
-project = bitflagrenderer.TITLE
-copyright = '{}, {}'.format(datetime.datetime.now().year, bitflagrenderer.AUTHOR)
-author = bitflagrenderer.AUTHOR
+path_init = pathlib.Path(__file__).parents[2] / 'bitflagrenderer' / '__init__.py'
+assert path_init.is_file()
+with open(path_init, encoding='utf-8') as file:
+    lines = file.read()
+    project = re.search("TITLE = '(?P<title>.*)'", lines).group('title')
+    author = re.search("AUTHOR = '(?P<author>.*)'", lines).group('author')
+    copyright = '{}, {}'.format(datetime.datetime.now().year, author)
+    release = re.search("__version__ = '(?P<version>.*)'", lines).group('version')
 
 # The full version, including alpha/beta/rc tags
-release = bitflagrenderer.VERSION
 master_doc = 'index'
 
 # -- General configuration ---------------------------------------------------
@@ -82,15 +52,15 @@ master_doc = 'index'
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = ['sphinx.ext.autodoc',
-    'sphinx.ext.doctest',
-    'sphinx.ext.intersphinx',
-    'sphinx.ext.todo',
-    'sphinx.ext.coverage',
-    'sphinx.ext.mathjax',
-    'sphinx.ext.ifconfig',
-    'sphinx.ext.viewcode',
-    'sphinx.ext.autosectionlabel'
-    ]
+              'sphinx.ext.doctest',
+              'sphinx.ext.intersphinx',
+              'sphinx.ext.todo',
+              'sphinx.ext.coverage',
+              'sphinx.ext.mathjax',
+              'sphinx.ext.ifconfig',
+              'sphinx.ext.viewcode',
+              'sphinx.ext.autosectionlabel'
+              ]
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
@@ -99,7 +69,6 @@ templates_path = ['_templates']
 # directories to ignore when looking for source files.
 # This pattern also affects html_static_path and html_extra_path.
 exclude_patterns = []
-
 
 # -- Options for HTML output -------------------------------------------------
 

@@ -13,42 +13,39 @@
 *                                                                         *
 ***************************************************************************/
 """
-
+import collections
+import os
+import sys
 import unittest
+from typing import List
 
-from qps.testing import initQgisApplication
+from qgis.PyQt.QtWidgets import QVBoxLayout
 
-# from qgis.testing import start_app
-# QAPP = start_app()
-# QAPP.setPkgDataPath(re.sub(r'/\.$', '/Library', QAPP.pkgDataPath()))
-
-from qps.utils import file_search
-from qps.testing import TestObjects, TestCase
-
-from bitflagrenderer.bitflagrenderer import *
-
-from bitflagrenderer import DIR_EXAMPLE_DATA, DIR_REPO
-
-pathFlagImage = list(file_search(DIR_EXAMPLE_DATA, re.compile(r'.*BQA.*\.tif$')))[0]
-pathTOAImage = list(file_search(DIR_EXAMPLE_DATA, re.compile(r'.*TOA.*\.tif$')))[0]
+from bitflagrenderer import DIR_REPO
+from bitflagrenderer.bitflagrenderer import BitFlagParameter, BitFlagModel, BitFlagRendererWidget, BitFlagScheme, \
+    BitFlagRenderer, BitFlagLayerConfigWidgetFactory, AboutBitFlagRenderer, BitFlagState, SaveFlagSchemeDialog
+from bitflagrenderer.exampledata import LC08_L1TP_227065_20191129_20191216_01_T1_BQA_subset_tif as pathFlagImage
+from qgis.PyQt.QtCore import Qt
+from qgis.PyQt.QtGui import QColor
+from qgis.PyQt.QtWidgets import QTreeView, QWidget, QHBoxLayout, QPushButton
+from qgis.core import QgsProject, QgsRasterLayer, QgsRasterDataProvider
+from qgis.gui import QgsMapCanvas, QgsRendererRasterPropertiesWidget
+from qgis.testing import start_app, TestCase
 
 DIR_TMP = DIR_REPO / 'tmp'
 os.makedirs(DIR_TMP, exist_ok=True)
 
+start_app(True)
+
 
 class BitFlagRendererTests(TestCase):
-
-    @classmethod
-    def setUpClass(cls, cleanup: bool = True, options=StartOptions.All, resources: list = None) -> None:
-        resources = [DIR_REPO / 'bitflagrenderer' / 'bitflagrenderer_rc.py']
-        super().setUpClass(cleanup=True, options=options, resources=resources)
 
     def bitFlagLayer(self) -> QgsRasterLayer:
         lyr = QgsRasterLayer(pathFlagImage)
         lyr.setName('Flag Image')
         return lyr
 
-    def createBitFlagParameters(self) -> typing.List[BitFlagParameter]:
+    def createBitFlagParameters(self) -> List[BitFlagParameter]:
         parValid = BitFlagParameter('Valid data', 0)
         self.assertIsInstance(parValid, BitFlagParameter)
         self.assertEqual(len(parValid), 2)
@@ -159,8 +156,8 @@ class BitFlagRendererTests(TestCase):
     def test_BitFlagSchemes(self):
 
         lyr = self.bitFlagLayer()
-        from bitflagrenderer.bitflagschemes import FORCE_QAI
-        scheme1 = FORCE_QAI()
+        from bitflagrenderer.bitflagschemes import DEPR_FORCE_QAI
+        scheme1 = DEPR_FORCE_QAI()
         self.assertIsInstance(scheme1, BitFlagScheme)
 
         w = BitFlagRendererWidget(lyr, lyr.extent())
@@ -314,7 +311,7 @@ class BitFlagRendererTests(TestCase):
 
         self.showGui(w)
 
-    def test_RendererRasterPropertiesWidget(self):
+    def test_RendererRasterPropertiesWidget2(self):
         lyr = self.bitFlagLayer()
         parameters = self.createBitFlagParameters()
 
@@ -350,4 +347,4 @@ class BitFlagRendererTests(TestCase):
 
 
 if __name__ == '__main__':
-    unittest.main()
+    unittest.main(buffer=False)

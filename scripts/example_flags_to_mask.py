@@ -1,9 +1,6 @@
-import pathlib
-import numpy as np
 from osgeo import gdal
-ROOT = pathlib.Path(__file__).parents[1]
 
-pathBQA = ROOT / 'exampledata' / 'LC08_L1TP_227065_20191129_20191216_01_T1.BQA.subset.tif'
+from bitflagrenderer.exampledata import LC08_L1TP_227065_20191129_20191216_01_T1_BQA_subset_tif as pathBQA
 
 assert pathBQA.is_file()
 

@@ -25,23 +25,19 @@ import datetime
 import os
 import pathlib
 import re
-import requests
 import shutil
-import sys
-import docutils.core
 import typing
-import xml.etree.ElementTree as ET
 from xml.dom import minidom
-from http.client import responses
+
+import docutils.core
 
 import bitflagrenderer
 from bitflagrenderer import DIR_REPO, __version__, PATH_ABOUT
 from qps.make.deploy import QGISMetadataFileWriter
-from qps.utils import file_search, zipdir
+from qps.utils import zipdir
 
 CHECK_COMMITS = False
-
-########## Config Section
+#  Config Section
 
 with open(PATH_ABOUT, 'r', encoding='utf-8') as f:
     aboutText = f.readlines()
@@ -65,8 +61,6 @@ MD.mEmail = 'benjamin.jakimow@geo.hu-berlin.de'
 
 PLUGIN_DIR_NAME = 'BitFlagRenderer'
 
-
-########## End of config section
 
 def scantree(path, pattern=re.compile('.$')) -> typing.Iterator[pathlib.Path]:
     """
@@ -92,7 +86,7 @@ def create_plugin():
         import git
         REPO = git.Repo(DIR_REPO)
         currentBranch = REPO.active_branch.name
-    except Exception as ex:
+    except ImportError as ex:
         currentBranch = 'TEST'
         print('Unable to find git repo. Set currentBranch to "{}"'.format(currentBranch))
 
@@ -137,14 +131,13 @@ def create_plugin():
 
     # update metadata version
 
-    f = open(DIR_REPO / 'bitflagrenderer' / '__init__.py')
-    lines = f.read()
-    f.close()
+    with open(DIR_REPO / 'bitflagrenderer' / '__init__.py') as file:
+        lines = file.read()
+
     lines = re.sub(r'(__version__\W*=\W*)([^\n]+)', r'__version__ = "{}"\n'.format(BUILD_NAME), lines)
-    f = open(PLUGIN_DIR / 'bitflagrenderer' / '__init__.py', 'w')
-    f.write(lines)
-    f.flush()
-    f.close()
+
+    with open(PLUGIN_DIR / 'bitflagrenderer' / '__init__.py', 'w') as file:
+        file.write(lines)
 
     createCHANGELOG(PLUGIN_DIR)
 
@@ -154,15 +147,12 @@ def create_plugin():
 
     # 7. install the zip file into the local QGIS instance. You will need to restart QGIS!
     if True:
-        info = []
-        info.append(f'\n### To update/install the BitFlagRenderer, run this command on your QGIS Python shell:\n')
-        info.append('from pyplugin_installer.installer import pluginInstaller')
-        info.append('pluginInstaller.installFromZipFile(r"{}")'.format(PLUGIN_ZIP))
-        info.append('#### Close (and restart manually)\n')
+        info = ['\n### To update/install the BitFlagRenderer, run this command on your QGIS Python shell:\n',
+                'from pyplugin_installer.installer import pluginInstaller',
+                'pluginInstaller.installFromZipFile(r"{}")'.format(PLUGIN_ZIP), '#### Close (and restart manually)\n',
+                'QProcess.startDetached(QgsApplication.arguments()[0], [])', 'QgsApplication.quit()\n',
+                '## press ENTER\n']
         # print('iface.mainWindow().close()\n')
-        info.append('QProcess.startDetached(QgsApplication.arguments()[0], [])')
-        info.append('QgsApplication.quit()\n')
-        info.append('## press ENTER\n')
 
         print('\n'.join(info))
 
@@ -190,8 +180,8 @@ def createCHANGELOG(dirPlugin):
 
     xml = minidom.parseString(html)
     #  remove headline
-    for i, node in enumerate(xml.getElementsByTagName('h1')):
-        if i == 0:
+    for idx, node in enumerate(xml.getElementsByTagName('h1')):
+        if idx == 0:
             node.parentNode.removeChild(node)
         else:
             node.tagName = 'h4'

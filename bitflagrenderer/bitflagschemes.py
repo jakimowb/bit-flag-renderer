@@ -14,13 +14,13 @@
 ***************************************************************************/
 """
 
-import typing
+from bitflagrenderer.bitflagrenderer import BitFlagScheme, BitFlagParameter
 from qgis.PyQt.QtGui import QColor
-from bitflagrenderer.bitflagrenderer import BitFlagScheme, BitFlagParameter, BitFlagState
 
 
 def Landsat8_QA() -> BitFlagScheme:
-    # see https://www.usgs.gov/land-resources/nli/landsat/landsat-collection-1-level-1-quality-assessment-band?qt-science_support_page_related_con=0#qt-science_support_page_related_con
+    # see https://www.usgs.gov/land-resources/nli/landsat/landsat-collection-1-level-1-quality-assessment-band?
+    # qt-science_support_page_related_con=0#qt-science_support_page_related_con
     scheme = BitFlagScheme('Landsat 8 Collection 1 QA band bits')
 
     p1 = BitFlagParameter('Designated Fill', 0)

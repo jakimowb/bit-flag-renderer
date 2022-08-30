@@ -31,16 +31,16 @@ from osgeo import gdal
 
 import qgis.utils
 from bitflagrenderer import DIR_BITFLAG_SCHEMES
-from qgis.PyQt import uic, QtXml
-from qgis.PyQt.QtCore import *
-from qgis.PyQt.QtGui import *
-from qgis.PyQt.QtWidgets import *
-from qgis.PyQt.QtXml import *
-from qgis.core import QgsRasterLayer, QgsRasterRenderer,\
-    QgsRasterTransparency, Qgis, \
+from qgis.PyQt import uic
+from qgis.PyQt.QtCore import QModelIndex, Qt, QAbstractItemModel, QSortFilterProxyModel, QSettings
+from qgis.PyQt.QtGui import QColor, QContextMenuEvent, QIcon
+from qgis.PyQt.QtWidgets import QAction, QTreeView, QMenu, QDialog, QInputDialog, QVBoxLayout, QWidget, QHeaderView
+from qgis.PyQt.QtXml import QDomDocument, QDomElement
+from qgis.core import QgsRasterLayer, QgsRasterRenderer, \
+    Qgis, \
     QgsRectangle, QgsSingleBandGrayRenderer, QgsRasterBlock, QgsRasterBlockFeedback
 from qgis.gui import QgsMapLayerConfigWidget, QgsMapCanvas, QgsRasterRendererWidget, \
-    QgsMapLayerConfigWidgetFactory, QgsColorDialog, QgsFileWidget, QgisInterface
+    QgsMapLayerConfigWidgetFactory, QgsColorDialog, QgsFileWidget
 
 PATH_UI = os.path.join(os.path.dirname(__file__), 'bitflagrenderer.ui')
 PATH_ABOUT_UI = os.path.join(os.path.dirname(__file__), 'aboutdialog.ui')
@@ -52,23 +52,6 @@ TYPE = 'BitFlagRenderer'
 
 # dictionary to store form classes and avoid multiple calls to read <myui>.ui
 QGIS_RESOURCE_WARNINGS = set()
-
-
-def qgisAppQgisInterface() -> QgisInterface:
-    """
-    Returns the QgisInterface of the QgisApp in case everything was started from within the QGIS Main Application
-    :return: QgisInterface | None in case the qgis.utils.iface points to another QgisInterface (e.g. the EnMAP-Box itself)
-    """
-    try:
-        import qgis.utils
-        if not isinstance(qgis.utils.iface, QgisInterface):
-            return None
-        mainWindow = qgis.utils.iface.mainWindow()
-        if not isinstance(mainWindow, QMainWindow) or mainWindow.objectName() != 'QgisApp':
-            return None
-        return qgis.utils.iface
-    except:
-        return None
 
 
 def settings() -> QSettings:
@@ -172,7 +155,7 @@ def loadUi(uifile, baseinstance=None, package='', resource_suffix='_rc', remove_
                 line, path = t
                 print('{}: "{}"'.format(i + 1, path), file=sys.stderr)
 
-        if len(missingQgs) > 0 and not isinstance(qgisAppQgisInterface(), QgisInterface):
+        if len(missingQgs) > 0:
             missingFiles = [p[1] for p in missingQrc if p[1] not in QGIS_RESOURCE_WARNINGS]
 
             if len(missingFiles) > 0:
@@ -211,10 +194,10 @@ def loadUi(uifile, baseinstance=None, package='', resource_suffix='_rc', remove_
         if False:
             if sClass.startswith('Qgs'):
                 cHeader.setNodeValue('qgis.gui')
-        if True:
-            # replace 'qps' package location with local absolute position
-            if sExtends.startswith('qps.'):
-                cHeader.setNodeValue(re.sub(r'^qps\.', qps.__spec__.name + '.', sExtends))
+            # if True:
+            #     # replace 'qps' package location with local absolute position
+            #    if sExtends.startswith('qps.'):
+            #         cHeader.setNodeValue(re.sub(r'^qps\.', qps.__spec__.name + '.', sExtends))
 
     if remove_resource_references:
         # remove resource file locations to avoid import errors.
@@ -434,6 +417,7 @@ class BitFlagState(object):
         info = f'{self.name()}-{self.bitNumber()}'
         return super().__repr__() + info
 
+
 class BitFlagParameter(object):
     """
     A class to define possible states of a flag / flag-set
@@ -616,7 +600,7 @@ class BitFlagScheme(object):
         schemes = [bfs.Landsat8_QA(),
                    bfs.LandsatTM_QA(),
                    bfs.LandsatMSS_QA(),
-                   #bfs.FORCE_QAI()
+                   # bfs.FORCE_QAI()
                    ]
         for s in schemes:
             SCHEMES[s.name()] = s
@@ -765,7 +749,8 @@ class BitFlagModel(QAbstractItemModel):
 
         self.mRootIndex = QModelIndex()
 
-        self.mColumnNames: typing.List[str] = [self.cnBitPosition, self.cnName, self.cnBitComb, self.cnBitNum, self.cnColor]
+        self.mColumnNames: typing.List[str] = [self.cnBitPosition, self.cnName, self.cnBitComb,
+                                               self.cnBitNum, self.cnColor]
 
         self.mColumnToolTips: typing.List[str] = [
             'The Flag Parameters bit position(s), e.g. "0" or "1-2"',
@@ -800,7 +785,7 @@ class BitFlagModel(QAbstractItemModel):
             lines.append('{}:{}'.format(par.mStartBit, par.name()))
             for j, state in enumerate(par):
                 assert isinstance(state, BitFlagState)
-                line = '  {}:{}'.format(state.bitCombination(), state.mNumber, state.name())
+                line = '  {}:{}:{}'.format(state.bitCombination(), state.mNumber, state.name())
                 lines.append(line)
         return '\n'.join(lines)
 
@@ -945,7 +930,7 @@ class BitFlagModel(QAbstractItemModel):
         if isinstance(item, BitFlagState):
 
             if role in [Qt.DisplayRole, Qt.EditRole]:
-                #if cName == self.cnBitPosition:
+                # if cName == self.cnBitPosition:
                 #    return item.bitNumber()
 
                 if cName == self.cnBitNum:
@@ -1063,7 +1048,7 @@ class BitFlagModel(QAbstractItemModel):
                             self.endInsertRows()
                         result = True
 
-        if result == True:
+        if result is True:
             self.dataChanged.emit(index, index, [role])
 
         return result
@@ -1134,8 +1119,8 @@ class BitFlagRendererTreeView(QTreeView):
         return m
 
     def onEditRequest(self, idx: QModelIndex):
-        #print(f'{idx} {idx.row()} {idx.column()} {idx.isValid()}')
-        #print(idx.data(role=Qt.UserRole))
+        # print(f'{idx} {idx.row()} {idx.column()} {idx.isValid()}')
+        # print(idx.data(role=Qt.UserRole))
         self.setCurrentIndex(idx)
         self.edit(idx)
 
@@ -1156,7 +1141,7 @@ class BitFlagRendererTreeView(QTreeView):
     def showColorDialog(self, idx: QModelIndex):
         item = idx.data(role=Qt.UserRole)
         if isinstance(item, BitFlagState):
-            c = QgsColorDialog.getColor(item.color(), self, \
+            c = QgsColorDialog.getColor(item.color(), self,
                                         'Set color for "{}"'.format(item.name()))
 
             if c.isValid():
@@ -1183,15 +1168,15 @@ class BitFlagRendererWidget(QgsRasterRendererWidget):
         self.mTreeView.header().setSectionResizeMode(3, QHeaderView.ResizeToContents)
         self.setRasterLayer(layer)
 
-        #self.mFlagModel.rowsInserted.connect(self.adjustColumnSizes)
-        #self.mFlagModel.rowsRemoved.connect(self.adjustColumnSizes)
+        # self.mFlagModel.rowsInserted.connect(self.adjustColumnSizes)
+        # self.mFlagModel.rowsRemoved.connect(self.adjustColumnSizes)
         self.mFlagModel.dataChanged.connect(self.widgetChanged.emit)
         self.mFlagModel.rowsInserted.connect(self.widgetChanged.emit)
         self.mFlagModel.rowsRemoved.connect(self.widgetChanged.emit)
 
         self.mTreeView.selectionModel().selectionChanged.connect(self.onSelectionChanged)
 
-        #self.adjustColumnSizes()
+        # self.adjustColumnSizes()
 
         self.restoreTreeViewState()
 
@@ -1258,7 +1243,7 @@ class BitFlagRendererWidget(QgsRasterRendererWidget):
                     self.mTreeView.setExpanded(idxP, item.mIsExpanded)
 
             self.mTreeView.setUpdatesEnabled(True)
-            #self.adjustColumnSizes()
+            # self.adjustColumnSizes()
             self.widgetChanged.emit()
 
     def bitFlagScheme(self) -> BitFlagScheme:
@@ -1464,6 +1449,7 @@ class BitFlagRenderer(QgsSingleBandGrayRenderer):
     def writeXml(self, doc: QDomDocument, parentElem: QDomElement) -> None:
         super().writeXml(doc, parentElem)
         s = ""
+
     def setBand(self, band: int):
         self.mBand = band
 
@@ -1655,6 +1641,7 @@ def registerConfigWidgetFactory():
     if not isinstance(FACTORY, BitFlagLayerConfigWidgetFactory):
         FACTORY = BitFlagLayerConfigWidgetFactory()
         qgis.utils.iface.registerMapLayerConfigWidgetFactory(FACTORY)
+
 
 def unregisterConfigWidgetFactory():
     global FACTORY

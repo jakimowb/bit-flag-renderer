@@ -1,0 +1,31 @@
+[flake8]
+ignore =
+    # QGS,
+    D203,
+    E501,
+    # allow line break before binary operator
+    W503,
+    # allow continuation line over-indented for hanging indent
+    E126,
+    # allow complex functions
+    C901,
+    # allow unused local variables
+    F841,
+    # allow lambda functions
+    E731
+
+max-line-length=120
+max-complexity = 10
+
+exclude =
+    # No need to traverse our git directory
+    .git,
+    *_rc.py
+    exampledata/__init__.py
+
+per-file-ignores =
+    #  QGS104 Use 'import qgis.PyQt.pyrcc_main' instead of 'import PyQt5.pyrcc_main'
+    # just not available in OSGeo4W installations
+    # script should run immediately which site.addsitedir(REPO) before other imports
+    scripts/*.py : E402
+
