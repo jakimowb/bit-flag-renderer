@@ -16,10 +16,7 @@
 
 import unittest
 
-from qgis._core import QgsProject, QgsRasterDataProvider
-from qgis._gui import QgsRendererRasterPropertiesWidget
-
-from qps.testing import initQgisApplication, StartOptions
+from qps.testing import initQgisApplication
 
 # from qgis.testing import start_app
 # QAPP = start_app()
@@ -264,7 +261,6 @@ class BitFlagRendererTests(TestCase):
         registerConfigWidgetFactory()
         unregisterConfigWidgetFactory()
 
-    @unittest.skipIf(TestCase.runsInCI(), 'Blocking Dialog')
     def test_AboutDialog(self):
 
         d = AboutBitFlagRenderer()
@@ -317,6 +313,40 @@ class BitFlagRendererTests(TestCase):
         cw = w.currentRenderWidget().renderer().type()
 
         self.showGui(w)
+
+    def test_RendererRasterPropertiesWidget(self):
+        lyr = self.bitFlagLayer()
+        parameters = self.createBitFlagParameters()
+
+        from qps.layerproperties import showLayerPropertiesDialog
+        canvas = QgsMapCanvas()
+        QgsProject.instance().addMapLayer(lyr)
+        canvas.mapSettings().setDestinationCrs(lyr.crs())
+        ext = lyr.extent()
+        ext.scale(1.1)
+        canvas.setExtent(ext)
+        canvas.setLayers([lyr])
+        canvas.show()
+        canvas.waitWhileRendering()
+        canvas.setCanvasColor(QColor('grey'))
+
+        r = BitFlagRenderer()
+        r.setInput(lyr.dataProvider())
+        lyr.setRenderer(r)
+
+        showLayerPropertiesDialog(lyr, canvas=canvas)
+
+    def test_writeStyle(self):
+
+        lyr = self.bitFlagLayer()
+        r = BitFlagRenderer()
+        r.setInput(lyr.dataProvider())
+        lyr.setRenderer(r)
+
+        DIR = self.createTestOutputDirectory()
+        path = DIR / 'mystyle.qml'
+        lyr.saveNamedStyle(path.as_posix())
+        self.assertTrue(path.is_file())
 
 
 if __name__ == '__main__':
