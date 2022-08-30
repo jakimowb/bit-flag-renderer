@@ -10,6 +10,7 @@ deploy/*
 temp/
 doc/build/*
 *_rc.py
+symbology-style.db
 tests/outputs
 tests/outputs/*
 test-reports.txt
