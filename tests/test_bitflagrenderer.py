@@ -16,7 +16,10 @@
 
 import unittest
 
-from qps.testing import initQgisApplication
+from qgis._core import QgsProject, QgsRasterDataProvider
+from qgis._gui import QgsRendererRasterPropertiesWidget
+
+from qps.testing import initQgisApplication, StartOptions
 
 # from qgis.testing import start_app
 # QAPP = start_app()
@@ -24,6 +27,7 @@ from qps.testing import initQgisApplication
 
 from qps.utils import file_search
 from qps.testing import TestObjects, TestCase
+
 from bitflagrenderer.bitflagrenderer import *
 
 from bitflagrenderer import DIR_EXAMPLE_DATA, DIR_REPO
@@ -36,6 +40,11 @@ os.makedirs(DIR_TMP, exist_ok=True)
 
 
 class BitFlagRendererTests(TestCase):
+
+    @classmethod
+    def setUpClass(cls, cleanup: bool = True, options=StartOptions.All, resources: list = None) -> None:
+        resources = [DIR_REPO / 'bitflagrenderer' / 'bitflagrenderer_rc.py']
+        super().setUpClass(cleanup=True, options=options, resources=resources)
 
     def bitFlagLayer(self) -> QgsRasterLayer:
         lyr = QgsRasterLayer(pathFlagImage)
@@ -255,6 +264,7 @@ class BitFlagRendererTests(TestCase):
         registerConfigWidgetFactory()
         unregisterConfigWidgetFactory()
 
+    @unittest.skipIf(TestCase.runsInCI(), 'Blocking Dialog')
     def test_AboutDialog(self):
 
         d = AboutBitFlagRenderer()

@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>361</width>
-    <height>334</height>
+    <width>414</width>
+    <height>358</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -81,7 +81,7 @@
            <string>-</string>
           </property>
           <property name="icon">
-           <iconset resource="../../../QGIS/images/images.qrc">
+           <iconset resource="../../QGIS/images/images.qrc">
             <normaloff>:/images/themes/default/mActionRemove.svg</normaloff>:/images/themes/default/mActionRemove.svg</iconset>
           </property>
           <property name="autoRaise">
@@ -95,7 +95,7 @@
            <string>+</string>
           </property>
           <property name="icon">
-           <iconset resource="../../../QGIS/images/images.qrc">
+           <iconset resource="../../QGIS/images/images.qrc">
             <normaloff>:/images/themes/default/mActionAdd.svg</normaloff>:/images/themes/default/mActionAdd.svg</iconset>
           </property>
           <property name="autoRaise">
@@ -109,7 +109,7 @@
            <string>+</string>
           </property>
           <property name="icon">
-           <iconset resource="../../../QGIS/images/images.qrc">
+           <iconset resource="../../QGIS/images/images.qrc">
             <normaloff>:/images/themes/default/mIconConnect.svg</normaloff>:/images/themes/default/mIconConnect.svg</iconset>
           </property>
           <property name="autoRaise">
@@ -154,7 +154,7 @@
            <string>...</string>
           </property>
           <property name="icon">
-           <iconset resource="../../../QGIS/images/images.qrc">
+           <iconset resource="../../QGIS/images/images.qrc">
             <normaloff>:/images/themes/default/mActionFileSave.svg</normaloff>:/images/themes/default/mActionFileSave.svg</iconset>
           </property>
           <property name="autoRaise">
@@ -168,7 +168,7 @@
            <string>...</string>
           </property>
           <property name="icon">
-           <iconset resource="../../../QGIS/images/images.qrc">
+           <iconset resource="../../QGIS/images/images.qrc">
             <normaloff>:/images/themes/default/mActionFileOpen.svg</normaloff>:/images/themes/default/mActionFileOpen.svg</iconset>
           </property>
           <property name="autoRaise">
@@ -177,6 +177,32 @@
          </widget>
         </item>
        </layout>
+      </item>
+      <item>
+       <widget class="QgsFilterLineEdit" name="mLineEdit">
+        <property name="placeholderText">
+         <string>Filter</string>
+        </property>
+        <property name="defaultValue">
+         <string/>
+        </property>
+        <property name="qgisRelation" stdset="0">
+         <string notr="true"/>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="BitFlagRendererTreeView" name="mTreeView">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+          <horstretch>0</horstretch>
+          <verstretch>2</verstretch>
+         </sizepolicy>
+        </property>
+        <property name="indentation">
+         <number>12</number>
+        </property>
+       </widget>
       </item>
      </layout>
     </widget>
@@ -204,7 +230,7 @@
   </layout>
   <action name="actionAddParameter">
    <property name="icon">
-    <iconset resource="../../../QGIS/images/images.qrc">
+    <iconset resource="../../QGIS/images/images.qrc">
      <normaloff>:/images/themes/default/mActionAdd.svg</normaloff>:/images/themes/default/mActionAdd.svg</iconset>
    </property>
    <property name="text">
@@ -216,7 +242,7 @@
   </action>
   <action name="actionRemoveParameters">
    <property name="icon">
-    <iconset resource="../../../QGIS/images/images.qrc">
+    <iconset resource="../../QGIS/images/images.qrc">
      <normaloff>:/images/themes/default/mActionRemove.svg</normaloff>:/images/themes/default/mActionRemove.svg</iconset>
    </property>
    <property name="text">
@@ -228,7 +254,7 @@
   </action>
   <action name="actionLoadBitFlagScheme">
    <property name="icon">
-    <iconset resource="../../../QGIS/images/images.qrc">
+    <iconset resource="../../QGIS/images/images.qrc">
      <normaloff>:/images/themes/default/mActionFileOpen.svg</normaloff>:/images/themes/default/mActionFileOpen.svg</iconset>
    </property>
    <property name="text">
@@ -240,7 +266,7 @@
   </action>
   <action name="actionSaveBitFlagScheme">
    <property name="icon">
-    <iconset resource="../../../QGIS/images/images.qrc">
+    <iconset resource="../../QGIS/images/images.qrc">
      <normaloff>:/images/themes/default/mActionFileSave.svg</normaloff>:/images/themes/default/mActionFileSave.svg</iconset>
    </property>
    <property name="text">
@@ -255,7 +281,7 @@
     <bool>true</bool>
    </property>
    <property name="icon">
-    <iconset resource="../../../QGIS/images/images.qrc">
+    <iconset resource="../../QGIS/images/images.qrc">
      <normaloff>:/images/themes/default/mIconConnect.svg</normaloff>:/images/themes/default/mIconConnect.svg</iconset>
    </property>
    <property name="text">
@@ -279,15 +305,25 @@
    <header>qgscolorbutton.h</header>
   </customwidget>
   <customwidget>
+   <class>QgsFilterLineEdit</class>
+   <extends>QLineEdit</extends>
+   <header>qgsfilterlineedit.h</header>
+  </customwidget>
+  <customwidget>
    <class>QgsRasterBandComboBox</class>
    <extends>QComboBox</extends>
    <header>qgsrasterbandcombobox.h</header>
   </customwidget>
+  <customwidget>
+   <class>BitFlagRendererTreeView</class>
+   <extends>QTreeView</extends>
+   <header>bitflagrenderer.bitflagrenderer</header>
+  </customwidget>
  </customwidgets>
  <resources>
-  <include location="../../../../QGIS/images/images.qrc"/>
-  <include location="../qpsbitflagrenderer.qrc"/>
-  <include location="../../../QGIS/images/images.qrc"/>
+  <include location="../../QGIS/images/images.qrc"/>
+  <include location="bitflagrenderer.qrc"/>
+  <include location="../../QGIS/images/images.qrc"/>
   <include location="../../QGIS/images/images.qrc"/>
  </resources>
  <connections/>

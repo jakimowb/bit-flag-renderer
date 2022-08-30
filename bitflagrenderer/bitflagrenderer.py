@@ -36,7 +36,8 @@ from qgis.PyQt.QtCore import *
 from qgis.PyQt.QtGui import *
 from qgis.PyQt.QtWidgets import *
 from qgis.PyQt.QtXml import *
-from qgis.core import QgsRasterLayer, QgsRasterRenderer, QgsRasterTransparency, Qgis, \
+from qgis.core import QgsRasterLayer, QgsRasterRenderer,\
+    QgsRasterTransparency, Qgis, \
     QgsRectangle, QgsSingleBandGrayRenderer, QgsRasterBlock, QgsRasterBlockFeedback
 from qgis.gui import QgsMapLayerConfigWidget, QgsMapCanvas, QgsRasterRendererWidget, \
     QgsMapLayerConfigWidgetFactory, QgsColorDialog, QgsFileWidget, QgisInterface
@@ -96,7 +97,7 @@ QGIS2NUMPY_DATA_TYPES = {Qgis.Byte: np.uint8,
                          Qgis.Int32: np.int32,
                          Qgis.Float32: np.float32,
                          Qgis.Float64: np.float64,
-                         Qgis.CFloat32: np.complex,
+                         Qgis.CFloat32: complex,
                          Qgis.CFloat64: np.complex64,
                          Qgis.ARGB32: np.uint32,
                          Qgis.ARGB32_Premultiplied: np.uint32}
@@ -1583,6 +1584,7 @@ class BitFlagRenderer(QgsSingleBandGrayRenderer):
         r.setBitFlagScheme(scheme)
 
         return r
+
 
 
 class BitFlagLayerConfigWidget(QgsMapLayerConfigWidget):
