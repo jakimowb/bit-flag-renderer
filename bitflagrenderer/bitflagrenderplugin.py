@@ -75,9 +75,9 @@ class BitFlagRendererPlugin(object):
         from qgis.utils import iface
 
         if os.path.isfile(pathTOA) and os.path.isfile(pathBQA):
-            lyrTOA = iface.addRasterLayer(pathTOA.as_posix(), 'Landsat TOA')
-            lyrBQA = iface.addRasterLayer(pathBQA.as_posix(), 'Landsat Quality Band')
-            lyrTOA.loadNamedStyle(pathTOAStyle.as_posix())
+            lyrTOA = iface.addRasterLayer(pathTOA, 'Landsat TOA')
+            lyrBQA = iface.addRasterLayer(pathBQA, 'Landsat Quality Band')
+            lyrTOA.loadNamedStyle(pathTOAStyle)
 
             scheme = Landsat8_QA()
             # show the cloud confidence paramter
@@ -95,7 +95,8 @@ class BitFlagRendererPlugin(object):
             canvas.setExtent(lyrBQA.extent())
 
     def unload(self):
-        self.iface.removePluginRasterMenu(self.mMenuName, self.mLoadExample)
-        self.iface.removePluginRasterMenu(self.mMenuName, self.mAboutAction)
+        from qgis.utils import iface
+        iface.removePluginRasterMenu(self.mMenuName, self.mLoadExample)
+        iface.removePluginRasterMenu(self.mMenuName, self.mAboutAction)
         from bitflagrenderer.bitflagrenderer import unregisterConfigWidgetFactory
         unregisterConfigWidgetFactory()

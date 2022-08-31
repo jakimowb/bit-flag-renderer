@@ -30,7 +30,7 @@ from qgis.PyQt.QtGui import QColor
 from qgis.PyQt.QtWidgets import QTreeView, QWidget, QHBoxLayout, QPushButton
 from qgis.core import QgsProject, QgsRasterLayer, QgsRasterDataProvider
 from qgis.gui import QgsMapCanvas, QgsRendererRasterPropertiesWidget
-from qgis.testing import start_app, TestCase
+from qps.testing import start_app, TestCase
 
 DIR_TMP = DIR_REPO / 'tmp'
 os.makedirs(DIR_TMP, exist_ok=True)
@@ -307,31 +307,8 @@ class BitFlagRendererTests(TestCase):
 
         w = QgsRendererRasterPropertiesWidget(lyr, canvas)
         w.show()
-        cw = w.currentRenderWidget().renderer().type()
 
         self.showGui(w)
-
-    def test_RendererRasterPropertiesWidget2(self):
-        lyr = self.bitFlagLayer()
-        parameters = self.createBitFlagParameters()
-
-        from qps.layerproperties import showLayerPropertiesDialog
-        canvas = QgsMapCanvas()
-        QgsProject.instance().addMapLayer(lyr)
-        canvas.mapSettings().setDestinationCrs(lyr.crs())
-        ext = lyr.extent()
-        ext.scale(1.1)
-        canvas.setExtent(ext)
-        canvas.setLayers([lyr])
-        canvas.show()
-        canvas.waitWhileRendering()
-        canvas.setCanvasColor(QColor('grey'))
-
-        r = BitFlagRenderer()
-        r.setInput(lyr.dataProvider())
-        lyr.setRenderer(r)
-
-        showLayerPropertiesDialog(lyr, canvas=canvas)
 
     def test_writeStyle(self):
 
