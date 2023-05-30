@@ -25,19 +25,16 @@ import datetime
 import os
 import pathlib
 import re
-import requests
 import shutil
-import sys
-import docutils.core
-import typing
-import xml.etree.ElementTree as ET
+from typing import Iterator
 from xml.dom import minidom
-from http.client import responses
+
+import docutils.core
 
 import bitflagrenderer
-from bitflagrenderer import DIR_REPO, __version__, PATH_ABOUT
+from bitflagrenderer import DIR_REPO, __version__, PATH_ABOUT, DIR_PKG
 from qps.make.deploy import QGISMetadataFileWriter
-from qps.utils import file_search, zipdir
+from qps.utils import zipdir
 
 CHECK_COMMITS = False
 
@@ -54,13 +51,13 @@ MD.mName = 'Bit Flag Renderer'
 MD.mDescription = bitflagrenderer.DESCRIPTION
 MD.mTags = ['Raster']
 MD.mCategory = 'Analysis'
-MD.mAuthor = 'Benjamin Jakimow, Geomatics Lab, Humboldt-Universität zu Berlin'
+MD.mAuthor = 'Benjamin Jakimow, Earth Observation Lab, Humboldt-Universität zu Berlin'
 MD.mIcon = 'bitflagrenderer/icons/bitflagimage.png'
 MD.mHomepage = bitflagrenderer.URL_HOMEPAGE
 MD.mAbout = aboutText
 MD.mTracker = bitflagrenderer.URL_ISSUE_TRACKER
 MD.mRepository = bitflagrenderer.URL_REPOSITORY
-MD.mQgisMinimumVersion = '3.14'
+MD.mQgisMinimumVersion = '3.28'
 MD.mEmail = 'benjamin.jakimow@geo.hu-berlin.de'
 
 PLUGIN_DIR_NAME = 'BitFlagRenderer'
@@ -68,7 +65,7 @@ PLUGIN_DIR_NAME = 'BitFlagRenderer'
 
 ########## End of config section
 
-def scantree(path, pattern=re.compile('.$')) -> typing.Iterator[pathlib.Path]:
+def scantree(path, pattern=re.compile('.$')) -> Iterator[pathlib.Path]:
     """
     Recursively returns file paths in directory
     :param path: root directory to search in
@@ -110,6 +107,7 @@ def create_plugin():
 
     PATH_METADATAFILE = PLUGIN_DIR / 'metadata.txt'
     MD.mVersion = BUILD_NAME
+    MD.writeMetadataTxt(DIR_PKG / 'metadata.txt')
     MD.writeMetadataTxt(PATH_METADATAFILE)
 
     # 1. (re)-compile all enmapbox resource files
@@ -118,12 +116,12 @@ def create_plugin():
     compileResources()
 
     # copy python and other resource files
-    pattern = re.compile(r'\.(py|svg|png|txt|ui|tif|qml|md|js|css)$')
-    files = list(scantree(DIR_REPO / 'bitflagrenderer', pattern=pattern))
-    files.extend(list(scantree(DIR_REPO / 'exampledata', pattern=pattern)))
-    files.append(DIR_REPO / '__init__.py')
+    pattern = re.compile(r'\.(py|svg|png|txt|ui|tif|qml|md|js|css|json)$')
+    files = list(scantree(DIR_PKG, pattern=pattern))
+    files.extend(list(scantree(DIR_PKG / 'flagschemes', pattern=pattern)))
+    files.append(DIR_PKG / '__init__.py')
     files.append(DIR_REPO / 'ABOUT.html')
-    files.append(DIR_REPO / 'CHANGELOG.rst')
+    files.append(DIR_REPO / 'CHANGELOG.md')
     files.append(DIR_REPO / 'LICENSE.md')
     files.append(DIR_REPO / 'LICENSE.html')
     files.append(DIR_REPO / 'requirements.txt')
@@ -170,11 +168,11 @@ def create_plugin():
 
 def createCHANGELOG(dirPlugin):
     """
-    Reads the CHANGELOG.rst and creates the deploy/CHANGELOG (without extension!) for the QGIS Plugin Manager
+    Reads the CHANGELOG.md and creates the deploy/CHANGELOG (without extension!) for the QGIS Plugin Manager
     :return:
     """
 
-    pathMD = os.path.join(DIR_REPO, 'CHANGELOG.rst')
+    pathMD = os.path.join(DIR_REPO, 'CHANGELOG.md')
     pathCL = os.path.join(dirPlugin, 'CHANGELOG')
 
     os.makedirs(os.path.dirname(pathCL), exist_ok=True)

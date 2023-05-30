@@ -17,7 +17,10 @@
 import os
 import pathlib
 
-__version__ = '0.4'
+__version__ = '0.5'
+
+from qgis.gui import QgisInterface
+
 TITLE = 'Bit Flag Renderer'
 AUTHOR = 'Benjamin Jakimow'
 MAIL = 'benjamin.jakimow@geo.hu-berlin.de'
@@ -34,15 +37,30 @@ DEPENDENCIES = ['numpy', 'gdal']
 
 LOG_MESSAGE_TAG = TITLE
 DIR_REPO = pathlib.Path(__file__).parents[1]
-DIR_EXAMPLE_DATA = DIR_REPO / 'exampledata'
-DIR_BITFLAG_SCHEMES = DIR_REPO / 'bitflagschemes'
-DIR_ICONS = DIR_REPO / 'bitflagrenderer' / 'icons'
+DIR_PKG = pathlib.Path(__file__).parent
+DIR_EXAMPLE_DATA = DIR_PKG / 'exampledata'
+DIR_BITFLAG_SCHEMES = DIR_PKG / 'bitflagschemes'
+DIR_ICONS = DIR_PKG / 'bitflagrenderer' / 'icons'
 
-PATH_CHANGELOG = DIR_REPO / 'CHANGELOG.rst'
+PATH_CHANGELOG = DIR_REPO / 'CHANGELOG.md'
 PATH_LICENSE = DIR_REPO / 'LICENSE.md'
 PATH_ABOUT = DIR_REPO / 'ABOUT.html'
 
 PATH_RESOURCES = pathlib.Path(__file__).parents[0] / 'resources.py'
-if os.path.isfile(PATH_RESOURCES):
-    import bitflagrenderer.resources
-    bitflagrenderer.resources.qInitResources()
+
+
+# if os.path.isfile(PATH_RESOURCES):
+#    import bitflagrenderer.resources
+#    bitflagrenderer.resources.qInitResources()
+
+def classFactory(iface: QgisInterface):  # pylint: disable=invalid-name
+    """Loads the Bit Flag Renderer Plugin.
+
+    :param iface: A QGIS interface instance.
+    :type iface: QgsInterface
+    """
+    pluginDir = os.path.dirname(__file__)
+    # if not pluginDir in sys.path:
+    #    sys.path.append(pluginDir)
+    from bitflagrenderer.bitflagrenderplugin import BitFlagRendererPlugin
+    return BitFlagRendererPlugin(iface)

@@ -3,12 +3,12 @@
 deploy/
 build/
 tmp/
-doc/build/
+docs/build/
 .idea/*
 .idea/*.*
 deploy/*
 temp/
-doc/build/*
+docs/build/*
 *_rc.py
 tests/outputs
 tests/outputs/*

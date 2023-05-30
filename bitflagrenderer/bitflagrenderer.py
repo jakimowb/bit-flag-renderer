@@ -25,6 +25,7 @@ import pickle
 import re
 import sys
 import typing
+from typing import Iterator, Any, List
 
 import numpy as np
 from osgeo import gdal
@@ -96,8 +97,8 @@ QGIS2NUMPY_DATA_TYPES = {Qgis.Byte: np.byte,
                          Qgis.Int32: np.int32,
                          Qgis.Float32: np.float32,
                          Qgis.Float64: np.float64,
-                         Qgis.CFloat32: np.complex,
-                         Qgis.CFloat64: np.complex64,
+                         #Qgis.CFloat32: np.complex,
+                         #Qgis.CFloat64: np.complex64,
                          Qgis.ARGB32: np.uint32,
                          Qgis.ARGB32_Premultiplied: np.uint32}
 
@@ -519,7 +520,7 @@ class BitFlagParameter(object):
     def __getitem__(self, slice):
         return self.mFlagStates[slice]
 
-    def __iter__(self) -> typing.Iterator[BitFlagState]:
+    def __iter__(self) -> Iterator[BitFlagState]:
         return iter(self.mFlagStates)
 
     def bitCount(self) -> int:
@@ -560,10 +561,10 @@ class BitFlagParameter(object):
             remove = self.mFlagStates[n + diff:]
             del self.mFlagStates[n + diff:]
 
-    def states(self) -> typing.List[BitFlagState]:
+    def states(self) -> List[BitFlagState]:
         return self.mFlagStates
 
-    def visibleStates(self) -> typing.List[BitFlagState]:
+    def visibleStates(self) -> List[BitFlagState]:
         return [state for state in self.mFlagStates if state.isVisible()]
 
     def name(self) -> str:
@@ -633,7 +634,7 @@ class BitFlagScheme(object):
         return SCHEMES
 
     @staticmethod
-    def fromFile(path: str) -> typing.List:
+    def fromFile(path: str) -> List:
         schemes = []
         if os.path.isfile(path):
             with open(path, 'r', encoding='utf-8') as f:
@@ -674,7 +675,7 @@ class BitFlagScheme(object):
     def __len__(self):
         return len(self.mParameters)
 
-    def __iter__(self) -> typing.List[BitFlagParameter]:
+    def __iter__(self) -> List[BitFlagParameter]:
         return iter(self.mParameters)
 
     def __contains__(self, item):
@@ -701,7 +702,7 @@ class BitFlagScheme(object):
 
         return scheme
 
-    def visibleStates(self) -> typing.List[BitFlagState]:
+    def visibleStates(self) -> List[BitFlagState]:
         """
         Returns all visible BitFlagStates
         :return: list
@@ -764,9 +765,9 @@ class BitFlagModel(QAbstractItemModel):
 
         self.mRootIndex = QModelIndex()
 
-        self.mColumnNames: typing.List[str] = [self.cnBitPosition, self.cnName, self.cnBitComb, self.cnBitNum, self.cnColor]
+        self.mColumnNames: List[str] = [self.cnBitPosition, self.cnName, self.cnBitComb, self.cnBitNum, self.cnColor]
 
-        self.mColumnToolTips: typing.List[str] = [
+        self.mColumnToolTips: List[str] = [
             'The Flag Parameters bit position(s), e.g. "0" or "1-2"',
             'Flag Parameter / Flag State name',
             'Bit combination of the Flag State',
@@ -786,7 +787,7 @@ class BitFlagModel(QAbstractItemModel):
     def __len__(self):
         return len(self.mFlagParameters)
 
-    def __iter__(self) -> typing.Iterator[BitFlagParameter]:
+    def __iter__(self) -> Iterator[BitFlagParameter]:
         return iter(self.mFlagParameters)
 
     def __repr__(self):
@@ -894,7 +895,7 @@ class BitFlagModel(QAbstractItemModel):
             return self.createIndex(row, column, flagParameter[row])
         return QModelIndex()
 
-    def data(self, index: QModelIndex, role: int) -> typing.Any:
+    def data(self, index: QModelIndex, role: int) -> Any:
         assert isinstance(index, QModelIndex)
         if not index.isValid():
             return None
@@ -981,7 +982,7 @@ class BitFlagModel(QAbstractItemModel):
 
         return None
 
-    def setData(self, index: QModelIndex, value: typing.Any, role: int = ...) -> bool:
+    def setData(self, index: QModelIndex, value: Any, role: int = ...) -> bool:
 
         if not index.isValid():
             return False
@@ -1483,7 +1484,7 @@ class BitFlagRenderer(QgsSingleBandGrayRenderer):
         d = pickle.loads(state)
         self.__dict__.update(d)
 
-    def usesBands(self) -> typing.List[int]:
+    def usesBands(self) -> List[int]:
         return [self.mBand]
 
     def writeXml(self, doc: QDomDocument, parentElem: QDomElement):

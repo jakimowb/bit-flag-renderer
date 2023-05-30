@@ -13,18 +13,36 @@
 *                                                                         *
 ***************************************************************************/
 """
-
+import inspect
+import pathlib
+import shutil
 import unittest
+import os
+import re
+import sys
 
-from qps.testing import initQgisApplication
+from osgeo import gdal
 
-# from qgis.testing import start_app
-# QAPP = start_app()
-# QAPP.setPkgDataPath(re.sub(r'/\.$', '/Library', QAPP.pkgDataPath()))
+import qgis.testing
+import gc
+from typing import List, OrderedDict, Union, Tuple, Set
 
-from qps.utils import file_search
-from qps.testing import TestObjects, TestCase
-from bitflagrenderer.bitflagrenderer import *
+from PyQt5.QtCore import Qt
+from PyQt5.QtGui import QColor, QImage
+from PyQt5.QtWidgets import QTreeView, QPushButton, QWidget, QHBoxLayout, QVBoxLayout, QApplication
+
+from qgis.gui import QgsMapCanvas, QgsRendererRasterPropertiesWidget
+
+from qgis.core import QgsProject, QgsRasterDataProvider, QgsProcessingContext, QgsProcessingFeedback
+
+from qps.utils import file_search, findUpwardPath
+from qgis.core import QgsRasterLayer
+
+from bitflagrenderer.bitflagrenderer import BitFlagParameter, BitFlagState, BitFlagScheme, BitFlagModel, \
+    BitFlagRendererWidget, BitFlagRenderer, SaveFlagSchemeDialog, BitFlagLayerConfigWidgetFactory, AboutBitFlagRenderer
+from qps.testing import start_app, TestCase
+
+start_app()
 
 from bitflagrenderer import DIR_EXAMPLE_DATA, DIR_REPO
 
@@ -35,14 +53,222 @@ DIR_TMP = DIR_REPO / 'tmp'
 os.makedirs(DIR_TMP, exist_ok=True)
 
 
-class BitFlagRendererTests(TestCase):
+class TestCaseBase(TestCase):
+
+    @staticmethod
+    def check_empty_layerstore(name: str):
+        error = None
+        if len(QgsProject.instance().mapLayers()) > 0:
+            error = f'QgsProject layers store is not empty:\n{name}:'
+            for lyr in QgsProject.instance().mapLayers().values():
+                error += f'\n\t{lyr.id()}: "{lyr.name()}"'
+            raise AssertionError(error)
+
+    def setUp(self):
+        self.check_empty_layerstore(f'{self.__class__.__name__}::{self._testMethodName}')
+
+    def tearDown(self):
+        self.check_empty_layerstore(f'{self.__class__.__name__}::{self._testMethodName}')
+        # call gc and processEvents to fail fast
+        gc.collect()
+        app = QApplication.instance()
+        if isinstance(app, QApplication):
+            app.processEvents()
+        gc.collect()
+
+    @classmethod
+    def setUpClass(cls):
+        cls.check_empty_layerstore(cls.__class__)
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.check_empty_layerstore(cls.__class__)
+
+    @classmethod
+    def showGui(cls, widgets: Union[QWidget, List[QWidget]] = None) -> bool:
+        """
+        Call this to show GUI(s) in case we do not run within a CI system
+        """
+
+        if widgets is None:
+            widgets = []
+        if not isinstance(widgets, list):
+            widgets = [widgets]
+
+        keepOpen = False
+
+        for w in widgets:
+            if isinstance(w, QWidget):
+                w.show()
+                keepOpen = True
+            elif callable(w):
+                w()
+
+        if cls.runsInCI():
+            return False
+
+        app = QApplication.instance()
+        if isinstance(app, QApplication) and keepOpen:
+            app.exec_()
+
+        return True
+
+    @staticmethod
+    def runsInCI() -> True:
+        """
+        Returns True if this the environment is supposed to run in a CI environment
+        and should not open blocking dialogs
+        """
+        return str(os.environ.get('CI', '')).lower() not in ['', 'none', 'false', '0']
+
+    @classmethod
+    def createProcessingContextFeedback(cls) -> Tuple[QgsProcessingContext, QgsProcessingFeedback]:
+        """
+        Create a QgsProcessingContext with connected QgsProcessingFeedback
+        """
+
+        def onProgress(progress: float):
+            sys.stdout.write('\r{:0.2f} %'.format(progress))
+            sys.stdout.flush()
+
+            if progress == 100:
+                print('')
+
+        feedback = QgsProcessingFeedback()
+        feedback.progressChanged.connect(onProgress)
+
+        context = QgsProcessingContext()
+        context.setFeedback(feedback)
+
+        return context, feedback
+
+    @classmethod
+    def createProcessingFeedback(cls) -> QgsProcessingFeedback:
+        """
+        Creates a QgsProcessingFeedback.
+        :return:
+        """
+        feedback = QgsProcessingFeedback()
+
+        return feedback
+
+    def createImageCopy(self, path, overwrite_existing: bool = True) -> str:
+        """
+        Creates a save image copy to manipulate metadata
+        :param path: str, path to valid raster image
+        :type path:
+        :return:
+        :rtype:
+        """
+        if isinstance(path, pathlib.Path):
+            path = path.as_posix()
+
+        ds: gdal.Dataset = gdal.Open(path)
+        assert isinstance(ds, gdal.Dataset)
+        drv: gdal.Driver = ds.GetDriver()
+
+        testdir = self.createTestOutputDirectory() / 'images'
+        os.makedirs(testdir, exist_ok=True)
+        bn, ext = os.path.splitext(os.path.basename(path))
+
+        newpath = testdir / f'{bn}{ext}'
+        i = 0
+        if overwrite_existing and newpath.is_file():
+            drv.Delete(newpath.as_posix())
+        else:
+            while newpath.is_file():
+                i += 1
+                newpath = testdir / f'{bn}{i}{ext}'
+
+        drv.CopyFiles(newpath.as_posix(), path)
+
+        return newpath.as_posix()
+
+    def createTestOutputDirectory(self,
+                                  name: str = 'test-outputs',
+                                  subdir: str = None) -> pathlib.Path:
+        """
+        Returns the path to a test output directory
+        :return:
+        """
+        if name is None:
+            name = 'test-outputs'
+        repo = findUpwardPath(inspect.getfile(self.__class__), '.git').parent
+
+        testDir = repo / name
+        os.makedirs(testDir, exist_ok=True)
+
+        if subdir:
+            testDir = testDir / subdir
+            os.makedirs(testDir, exist_ok=True)
+
+        return testDir
+
+    def createTestCaseDirectory(self,
+                                basename: str = None,
+                                testclass: bool = True,
+                                testmethod: bool = True
+                                ):
+
+        d = self.createTestOutputDirectory(name=basename)
+        if testclass:
+            d = d / self.__class__.__name__
+        if testmethod:
+            d = d / self._testMethodName
+
+        os.makedirs(d, exist_ok=True)
+        return d
+
+    @classmethod
+    def assertImagesEqual(cls, image1: QImage, image2: QImage):
+        if image1.size() != image2.size():
+            return False
+        if image1.format() != image2.format():
+            return False
+
+        for x in range(image1.width()):
+            for y in range(image1.height()):
+                if image1.pixel(x, y, ) != image2.pixel(x, y):
+                    return False
+        return True
+
+    def tempDir(self, subdir: str = None, cleanup: bool = False) -> pathlib.Path:
+        """
+        Returns the <enmapbox-repository/test-outputs/test name> directory
+        :param subdir:
+        :param cleanup:
+        :return: pathlib.Path
+        """
+        DIR_REPO = findUpwardPath(__file__, '.git').parent
+        if isinstance(self, TestCaseBase):
+            foldername = self.__class__.__name__
+        else:
+            foldername = self.__name__
+        p = pathlib.Path(DIR_REPO) / 'test-outputs' / foldername
+        if isinstance(subdir, str):
+            p = p / subdir
+        if cleanup and p.exists() and p.is_dir():
+            shutil.rmtree(p)
+        os.makedirs(p, exist_ok=True)
+        return p
+
+    @classmethod
+    def _readVSIMemFiles(cls) -> Set[str]:
+
+        r = gdal.ReadDirRecursive('/vsimem/')
+        if r is None:
+            return set([])
+        return set(r)
+
+
+class BitFlagRendererTests(TestCaseBase):
 
     def bitFlagLayer(self) -> QgsRasterLayer:
         lyr = QgsRasterLayer(pathFlagImage)
         lyr.setName('Flag Image')
         return lyr
 
-    def createBitFlagParameters(self) -> typing.List[BitFlagParameter]:
+    def createBitFlagParameters(self) -> List[BitFlagParameter]:
         parValid = BitFlagParameter('Valid data', 0)
         self.assertIsInstance(parValid, BitFlagParameter)
         self.assertEqual(len(parValid), 2)
@@ -105,6 +331,7 @@ class BitFlagRendererTests(TestCase):
         flagModel.setData(idx, '3', role=[Qt.EditRole])
 
         self.showGui(tv)
+        QgsProject.instance().removeAllMapLayers()
 
     def test_BitFlagRendererWidget(self):
 
@@ -149,12 +376,13 @@ class BitFlagRendererTests(TestCase):
         w.saveTreeViewState()
 
         self.showGui(top)
+        QgsProject.instance().removeAllMapLayers()
 
     def test_BitFlagSchemes(self):
 
         lyr = self.bitFlagLayer()
-        from bitflagrenderer.bitflagschemes import FORCE_QAI
-        scheme1 = FORCE_QAI()
+        from bitflagrenderer.bitflagschemes import DEPR_FORCE_QAI
+        scheme1 = DEPR_FORCE_QAI()
         self.assertIsInstance(scheme1, BitFlagScheme)
 
         w = BitFlagRendererWidget(lyr, lyr.extent())
@@ -173,10 +401,12 @@ class BitFlagRendererTests(TestCase):
         self.assertListEqual(savesSchemes, [scheme1])
 
         allSchemes = BitFlagScheme.loadAllSchemes()
-        self.assertIsInstance(allSchemes, collections.OrderedDict)
+        self.assertIsInstance(allSchemes, OrderedDict)
         for k, v in allSchemes.items():
             self.assertIsInstance(v, BitFlagScheme)
             self.assertEqual(k, v.name())
+
+        QgsProject.instance().removeAllMapLayers()
 
     def test_SaveFlagSchemeDialog(self):
 
@@ -186,6 +416,7 @@ class BitFlagRendererTests(TestCase):
         self.assertEqual(schema, d.schema())
 
         self.showGui(d)
+        QgsProject.instance().removeAllMapLayers()
 
     def test_BitFlagRenderer(self):
 
@@ -220,6 +451,7 @@ class BitFlagRendererTests(TestCase):
         canvas.waitWhileRendering()
 
         self.showGui(canvas)
+        QgsProject.instance().removeAllMapLayers()
 
     def test_BitFlagLayerConfigWidget(self):
 
@@ -247,6 +479,7 @@ class BitFlagRendererTests(TestCase):
         top.show()
 
         self.showGui(w)
+        QgsProject.instance().removeAllMapLayers()
 
     def test_factory(self):
 
@@ -283,6 +516,8 @@ class BitFlagRendererTests(TestCase):
         if addPluginDir:
             sys.path.remove(pluginDir)
 
+        QgsProject.instance().removeAllMapLayers()
+
     def test_RendererRasterPropertiesWidget(self):
         lyr = self.bitFlagLayer()
         parameters = self.createBitFlagParameters()
@@ -307,6 +542,7 @@ class BitFlagRendererTests(TestCase):
         cw = w.currentRenderWidget().renderer().type()
 
         self.showGui(w)
+        QgsProject.instance().removeAllMapLayers()
 
 
 if __name__ == '__main__':

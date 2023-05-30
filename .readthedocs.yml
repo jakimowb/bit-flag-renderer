@@ -7,7 +7,7 @@ version: 2
 
 
 sphinx:
-  configuration: doc/source/conf.py
+  configuration: docs/source/conf.py
 
 formats:
   - htmlzip
@@ -15,6 +15,6 @@ formats:
 python:
   version: 3.7
   install:
-    - requirements:  doc/source/requirements.txt
+    - requirements:  docs/source/requirements.txt
 
 

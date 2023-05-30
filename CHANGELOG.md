@@ -1,8 +1,11 @@
-Changelog
-=========
+# Changelog
 
-Version 0.4
------------
+## Version 0.5
+
+- fixed numpy data types
+- refactoring
+
+## Version 0.4
 
 - changed group checkbox selection behaviour: selecting the entire Bit Flag Group will select all
   BitFlagStates except the 1st = empty flag (closes #6)
@@ -12,22 +15,19 @@ Version 0.4
 - fixed initial visibility for bit flag states loaded from XML (closes #8)
 
 
-Version 0.3
------------
+## Version 0.3
 
 - loading a bit flag scheme updates the raster layer renderer
 - reversed bit rendering order. least significant bit is rendered last, e.g. a "top layer"
 - fixed FORCE bit flag scheme and uses FORCE overview image (OVV) colors by default
 
-Version 0.2
------------
+## Version 0.2
 
  - tree view recalls expansion state of flag parameter nodes
  - fixed saving of Flag Schemes
  - cleaned code, removed a PPT from docs (issue #1)
 
-Version 0.1
------------
+## Version 0.1
 
  - first version
  - predefined flag schemes for Landsat 4-8 QA bands and FORCE QAI
