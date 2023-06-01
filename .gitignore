@@ -4,17 +4,14 @@ deploy/
 build/
 tmp/
 docs/build/
-.idea/*
-.idea/*.*
 deploy/*
 temp/
-docs/build/*
+.coverage
 *_rc.py
 tests/outputs
 tests/outputs/*
 test-reports.txt
 test-results/
-bitflagrenderer/resources.py
 *.gpkg-shm
 *.gpkg-wal
 
