@@ -1,0 +1,3 @@
+[submodule "tests/qgispluginsupport"]
+	path = tests/qgispluginsupport
+	url = git@github.com:EnMAP-Box/qgispluginsupport.git

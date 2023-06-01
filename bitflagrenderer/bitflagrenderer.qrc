@@ -1,6 +1,0 @@
-<RCC>
-  <qresource prefix="bitflagrenderer">
-    <file>icons/logo_hub.svg</file>
-    <file>icons/bitflagimage.png</file>
-  </qresource>
-</RCC>

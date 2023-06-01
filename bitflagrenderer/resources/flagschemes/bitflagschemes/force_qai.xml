@@ -1,0 +1,58 @@
+<BitFlagSchemes>
+ <BitFlagScheme noDataColor="#00000000" name="Force QAI (Landsat Pixel QA Colors)">
+  <BitFlagParameter bitCount="1" firstBit="0" name="Valid data">
+   <BitFlagState color="#000" name="valid" number="0" visible="0"/>
+   <BitFlagState color="#fff" name="no data" number="1" visible="0"/>
+  </BitFlagParameter>
+  <BitFlagParameter bitCount="2" firstBit="1" name="Cloud state">
+   <BitFlagState color="#000" name="clear" number="0" visible="1"/>
+   <BitFlagState color="#b00" name="less confident cloud" number="1" visible="0"/>
+   <BitFlagState color="#fff" name="confident, opaque cloud" number="2" visible="0"/>
+   <BitFlagState color="#fff" name="cirrus" number="3" visible="0"/>
+  </BitFlagParameter>
+  <BitFlagParameter bitCount="1" firstBit="3" name="Cloud shadow">
+   <BitFlagState color="#fff" name="No" number="0" visible="0"/>
+   <BitFlagState color="#888" name="Yes" number="1" visible="0"/>
+  </BitFlagParameter>
+  <BitFlagParameter bitCount="1" firstBit="4" name="Snow">
+   <BitFlagState color="#fff" name="No" number="0" visible="0"/>
+   <BitFlagState color="#3ff" name="Yes" number="1" visible="0"/>
+  </BitFlagParameter>
+  <BitFlagParameter bitCount="1" firstBit="5" name="Water">
+   <BitFlagState color="#fff" name="No" number="0" visible="0"/>
+   <BitFlagState color="#00f" name="Yes" number="1" visible="0"/>
+  </BitFlagParameter>
+  <BitFlagParameter bitCount="2" firstBit="6" name="Aerosol">
+   <BitFlagState color="#ffffffff" name="estimated" number="0" visible="0"/>
+   <BitFlagState color="#ffff0105" name="interpolated" number="1" visible="0"/>
+   <BitFlagState color="#ffff2701" name="high" number="2" visible="0"/>
+   <BitFlagState color="#ffff5101" name="fill" number="3" visible="0"/>
+  </BitFlagParameter>
+  <BitFlagParameter bitCount="1" firstBit="8" name="Subzero">
+   <BitFlagState color="#fff" name="No" number="0" visible="0"/>
+   <BitFlagState color="#f00" name="Yes" number="1" visible="0"/>
+  </BitFlagParameter>
+  <BitFlagParameter bitCount="1" firstBit="9" name="Saturation">
+   <BitFlagState color="#fff" name="No" number="0" visible="0"/>
+   <BitFlagState color="#f00" name="Yes" number="1" visible="0"/>
+  </BitFlagParameter>
+  <BitFlagParameter bitCount="1" firstBit="10" name="High sun zenith">
+   <BitFlagState color="#fff" name="No" number="0" visible="0"/>
+   <BitFlagState color="#f00" name="Yes" number="1" visible="0"/>
+  </BitFlagParameter>
+  <BitFlagParameter bitCount="2" firstBit="11" name="Illumination">
+   <BitFlagState color="#0f0" name="good" number="0" visible="0"/>
+   <BitFlagState color="#ff0" name="low" number="1" visible="0"/>
+   <BitFlagState color="#f80" name="poor" number="2" visible="0"/>
+   <BitFlagState color="#f00" name="shadow" number="3" visible="0"/>
+  </BitFlagParameter>
+  <BitFlagParameter bitCount="1" firstBit="13" name="Slope">
+   <BitFlagState color="#fff" name="No" number="0" visible="0"/>
+   <BitFlagState color="#f00" name="Yes" number="1" visible="0"/>
+  </BitFlagParameter>
+  <BitFlagParameter bitCount="1" firstBit="14" name="Water vapor">
+   <BitFlagState color="#0f0" name="measured" number="0" visible="0"/>
+   <BitFlagState color="#f00" name="fill" number="1" visible="0"/>
+  </BitFlagParameter>
+ </BitFlagScheme>
+</BitFlagSchemes>

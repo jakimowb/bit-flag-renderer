@@ -13,38 +13,32 @@
 *                                                                         *
 ***************************************************************************/
 """
-import inspect
-import pathlib
-import shutil
-import unittest
 import os
 import re
 import sys
+import unittest
+from typing import List, OrderedDict
 
-from osgeo import gdal
+from qgis.PyQt.QtCore import Qt
+from qgis.PyQt.QtGui import QColor
+from qgis.PyQt.QtWidgets import QTreeView, QPushButton, QWidget, QHBoxLayout, QVBoxLayout
 
-import qgis.testing
-import gc
-from typing import List, OrderedDict, Union, Tuple, Set
-
-from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QColor, QImage
-from PyQt5.QtWidgets import QTreeView, QPushButton, QWidget, QHBoxLayout, QVBoxLayout, QApplication
-
-from qgis.gui import QgsMapCanvas, QgsRendererRasterPropertiesWidget
-
-from qgis.core import QgsProject, QgsRasterDataProvider, QgsProcessingContext, QgsProcessingFeedback
-
-from qps.utils import file_search, findUpwardPath
+from bitflagrenderer import DIR_EXAMPLE_DATA, DIR_REPO, registerConfigWidgetFactory, unregisterConfigWidgetFactory
+from bitflagrenderer.core.bitflagmodel import BitFlagModel
+from bitflagrenderer.core.bitflagscheme import BitFlagScheme, BitFlagParameter, BitFlagState
+from bitflagrenderer.core.bitlfagrenderer import BitFlagRenderer
+from bitflagrenderer.gui.aboutdialog import AboutBitFlagRenderer
+from bitflagrenderer.gui.bitflaglayerconfigwidget import BitFlagLayerConfigWidgetFactory
+from bitflagrenderer.gui.bitflagrasterrendererwidet import BitFlagRasterRendererWidget
+from bitflagrenderer.gui.saveflagschemedialog import SaveFlagSchemeDialog
+from qgis.core import QgsProject, QgsRasterDataProvider
 from qgis.core import QgsRasterLayer
-
-from bitflagrenderer.bitflagrenderer import BitFlagParameter, BitFlagState, BitFlagScheme, BitFlagModel, \
-    BitFlagRendererWidget, BitFlagRenderer, SaveFlagSchemeDialog, BitFlagLayerConfigWidgetFactory, AboutBitFlagRenderer
+from qgis.gui import QgsMapCanvas, QgsRendererRasterPropertiesWidget
 from qps.testing import start_app, TestCase
+from qps.utils import file_search
 
 start_app()
 
-from bitflagrenderer import DIR_EXAMPLE_DATA, DIR_REPO
 
 pathFlagImage = list(file_search(DIR_EXAMPLE_DATA, re.compile(r'.*BQA.*\.tif$')))[0]
 pathTOAImage = list(file_search(DIR_EXAMPLE_DATA, re.compile(r'.*TOA.*\.tif$')))[0]
@@ -53,215 +47,7 @@ DIR_TMP = DIR_REPO / 'tmp'
 os.makedirs(DIR_TMP, exist_ok=True)
 
 
-class TestCaseBase(TestCase):
-
-    @staticmethod
-    def check_empty_layerstore(name: str):
-        error = None
-        if len(QgsProject.instance().mapLayers()) > 0:
-            error = f'QgsProject layers store is not empty:\n{name}:'
-            for lyr in QgsProject.instance().mapLayers().values():
-                error += f'\n\t{lyr.id()}: "{lyr.name()}"'
-            raise AssertionError(error)
-
-    def setUp(self):
-        self.check_empty_layerstore(f'{self.__class__.__name__}::{self._testMethodName}')
-
-    def tearDown(self):
-        self.check_empty_layerstore(f'{self.__class__.__name__}::{self._testMethodName}')
-        # call gc and processEvents to fail fast
-        gc.collect()
-        app = QApplication.instance()
-        if isinstance(app, QApplication):
-            app.processEvents()
-        gc.collect()
-
-    @classmethod
-    def setUpClass(cls):
-        cls.check_empty_layerstore(cls.__class__)
-
-    @classmethod
-    def tearDownClass(cls):
-        cls.check_empty_layerstore(cls.__class__)
-
-    @classmethod
-    def showGui(cls, widgets: Union[QWidget, List[QWidget]] = None) -> bool:
-        """
-        Call this to show GUI(s) in case we do not run within a CI system
-        """
-
-        if widgets is None:
-            widgets = []
-        if not isinstance(widgets, list):
-            widgets = [widgets]
-
-        keepOpen = False
-
-        for w in widgets:
-            if isinstance(w, QWidget):
-                w.show()
-                keepOpen = True
-            elif callable(w):
-                w()
-
-        if cls.runsInCI():
-            return False
-
-        app = QApplication.instance()
-        if isinstance(app, QApplication) and keepOpen:
-            app.exec_()
-
-        return True
-
-    @staticmethod
-    def runsInCI() -> True:
-        """
-        Returns True if this the environment is supposed to run in a CI environment
-        and should not open blocking dialogs
-        """
-        return str(os.environ.get('CI', '')).lower() not in ['', 'none', 'false', '0']
-
-    @classmethod
-    def createProcessingContextFeedback(cls) -> Tuple[QgsProcessingContext, QgsProcessingFeedback]:
-        """
-        Create a QgsProcessingContext with connected QgsProcessingFeedback
-        """
-
-        def onProgress(progress: float):
-            sys.stdout.write('\r{:0.2f} %'.format(progress))
-            sys.stdout.flush()
-
-            if progress == 100:
-                print('')
-
-        feedback = QgsProcessingFeedback()
-        feedback.progressChanged.connect(onProgress)
-
-        context = QgsProcessingContext()
-        context.setFeedback(feedback)
-
-        return context, feedback
-
-    @classmethod
-    def createProcessingFeedback(cls) -> QgsProcessingFeedback:
-        """
-        Creates a QgsProcessingFeedback.
-        :return:
-        """
-        feedback = QgsProcessingFeedback()
-
-        return feedback
-
-    def createImageCopy(self, path, overwrite_existing: bool = True) -> str:
-        """
-        Creates a save image copy to manipulate metadata
-        :param path: str, path to valid raster image
-        :type path:
-        :return:
-        :rtype:
-        """
-        if isinstance(path, pathlib.Path):
-            path = path.as_posix()
-
-        ds: gdal.Dataset = gdal.Open(path)
-        assert isinstance(ds, gdal.Dataset)
-        drv: gdal.Driver = ds.GetDriver()
-
-        testdir = self.createTestOutputDirectory() / 'images'
-        os.makedirs(testdir, exist_ok=True)
-        bn, ext = os.path.splitext(os.path.basename(path))
-
-        newpath = testdir / f'{bn}{ext}'
-        i = 0
-        if overwrite_existing and newpath.is_file():
-            drv.Delete(newpath.as_posix())
-        else:
-            while newpath.is_file():
-                i += 1
-                newpath = testdir / f'{bn}{i}{ext}'
-
-        drv.CopyFiles(newpath.as_posix(), path)
-
-        return newpath.as_posix()
-
-    def createTestOutputDirectory(self,
-                                  name: str = 'test-outputs',
-                                  subdir: str = None) -> pathlib.Path:
-        """
-        Returns the path to a test output directory
-        :return:
-        """
-        if name is None:
-            name = 'test-outputs'
-        repo = findUpwardPath(inspect.getfile(self.__class__), '.git').parent
-
-        testDir = repo / name
-        os.makedirs(testDir, exist_ok=True)
-
-        if subdir:
-            testDir = testDir / subdir
-            os.makedirs(testDir, exist_ok=True)
-
-        return testDir
-
-    def createTestCaseDirectory(self,
-                                basename: str = None,
-                                testclass: bool = True,
-                                testmethod: bool = True
-                                ):
-
-        d = self.createTestOutputDirectory(name=basename)
-        if testclass:
-            d = d / self.__class__.__name__
-        if testmethod:
-            d = d / self._testMethodName
-
-        os.makedirs(d, exist_ok=True)
-        return d
-
-    @classmethod
-    def assertImagesEqual(cls, image1: QImage, image2: QImage):
-        if image1.size() != image2.size():
-            return False
-        if image1.format() != image2.format():
-            return False
-
-        for x in range(image1.width()):
-            for y in range(image1.height()):
-                if image1.pixel(x, y, ) != image2.pixel(x, y):
-                    return False
-        return True
-
-    def tempDir(self, subdir: str = None, cleanup: bool = False) -> pathlib.Path:
-        """
-        Returns the <enmapbox-repository/test-outputs/test name> directory
-        :param subdir:
-        :param cleanup:
-        :return: pathlib.Path
-        """
-        DIR_REPO = findUpwardPath(__file__, '.git').parent
-        if isinstance(self, TestCaseBase):
-            foldername = self.__class__.__name__
-        else:
-            foldername = self.__name__
-        p = pathlib.Path(DIR_REPO) / 'test-outputs' / foldername
-        if isinstance(subdir, str):
-            p = p / subdir
-        if cleanup and p.exists() and p.is_dir():
-            shutil.rmtree(p)
-        os.makedirs(p, exist_ok=True)
-        return p
-
-    @classmethod
-    def _readVSIMemFiles(cls) -> Set[str]:
-
-        r = gdal.ReadDirRecursive('/vsimem/')
-        if r is None:
-            return set([])
-        return set(r)
-
-
-class BitFlagRendererTests(TestCaseBase):
+class BitFlagRendererTests(TestCase):
 
     def bitFlagLayer(self) -> QgsRasterLayer:
         lyr = QgsRasterLayer(pathFlagImage)
@@ -348,7 +134,7 @@ class BitFlagRendererTests(TestCaseBase):
         canvas.waitWhileRendering()
         canvas.setCanvasColor(QColor('grey'))
 
-        w = BitFlagRendererWidget(lyr, lyr.extent())
+        w = BitFlagRasterRendererWidget(lyr, lyr.extent())
 
         btnReAdd = QPushButton('Re-Add')
         btnReAdd.clicked.connect(lambda: w.setRasterLayer(w.rasterLayer()))
@@ -385,7 +171,7 @@ class BitFlagRendererTests(TestCaseBase):
         scheme1 = DEPR_FORCE_QAI()
         self.assertIsInstance(scheme1, BitFlagScheme)
 
-        w = BitFlagRendererWidget(lyr, lyr.extent())
+        w = BitFlagRasterRendererWidget(lyr, lyr.extent())
         w.setBitFlagScheme(scheme1)
 
         r = w.renderer().clone()
@@ -483,8 +269,6 @@ class BitFlagRendererTests(TestCaseBase):
 
     def test_factory(self):
 
-        from bitflagrenderer.bitflagrenderer import registerConfigWidgetFactory, unregisterConfigWidgetFactory
-
         registerConfigWidgetFactory()
         unregisterConfigWidgetFactory()
 
@@ -502,7 +286,7 @@ class BitFlagRendererTests(TestCaseBase):
         if addPluginDir:
             sys.path.append(pluginDir)
 
-        from bitflagrenderer.bitflagrenderplugin import BitFlagRendererPlugin
+        from bitflagrenderer.plugin import BitFlagRendererPlugin
         from qgis.utils import iface
         plugin = BitFlagRendererPlugin(iface)
 

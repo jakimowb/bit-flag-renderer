@@ -14,9 +14,8 @@
 ***************************************************************************/
 """
 
-import typing
 from qgis.PyQt.QtGui import QColor
-from bitflagrenderer.bitflagrenderer import BitFlagScheme, BitFlagParameter, BitFlagState
+from bitflagrenderer.core.bitflagscheme import BitFlagScheme, BitFlagParameter
 
 
 def Landsat8_QA() -> BitFlagScheme:

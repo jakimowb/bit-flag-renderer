@@ -13,12 +13,15 @@
 *                                                                         *
 ***************************************************************************/
 """
-
+import enum
 import os
 import pathlib
 
 __version__ = '0.5'
 
+from qgis.PyQt.QtCore import QSettings
+
+import qgis.utils
 from qgis.gui import QgisInterface
 
 TITLE = 'Bit Flag Renderer'
@@ -37,10 +40,10 @@ DEPENDENCIES = ['numpy', 'gdal']
 
 LOG_MESSAGE_TAG = TITLE
 DIR_REPO = pathlib.Path(__file__).parents[1]
-DIR_PKG = pathlib.Path(__file__).parent
-DIR_EXAMPLE_DATA = DIR_PKG / 'exampledata'
-DIR_BITFLAG_SCHEMES = DIR_PKG / 'bitflagschemes'
-DIR_ICONS = DIR_PKG / 'bitflagrenderer' / 'icons'
+DIR_RESOURCES = pathlib.Path(__file__).parent / 'resources'
+DIR_EXAMPLE_DATA = DIR_RESOURCES / 'exampledata'
+DIR_BITFLAG_SCHEMES = DIR_RESOURCES / 'bitflagschemes'
+DIR_ICONS = DIR_RESOURCES / 'bitflagrenderer' / 'icons'
 
 PATH_CHANGELOG = DIR_REPO / 'CHANGELOG.md'
 PATH_LICENSE = DIR_REPO / 'LICENSE.md'
@@ -62,5 +65,53 @@ def classFactory(iface: QgisInterface):  # pylint: disable=invalid-name
     pluginDir = os.path.dirname(__file__)
     # if not pluginDir in sys.path:
     #    sys.path.append(pluginDir)
-    from bitflagrenderer.bitflagrenderplugin import BitFlagRendererPlugin
+    from bitflagrenderer.plugin import BitFlagRendererPlugin
     return BitFlagRendererPlugin(iface)
+
+
+def registerConfigWidgetFactory():
+    global FACTORY
+    from .gui.bitflaglayerconfigwidget import BitFlagLayerConfigWidgetFactory
+    if not isinstance(FACTORY, BitFlagLayerConfigWidgetFactory):
+        FACTORY = BitFlagLayerConfigWidgetFactory()
+        qgis.utils.iface.registerMapLayerConfigWidgetFactory(FACTORY)
+
+
+def unregisterConfigWidgetFactory():
+    global FACTORY
+    from .gui.bitflaglayerconfigwidget import BitFlagLayerConfigWidgetFactory
+    if isinstance(FACTORY, BitFlagLayerConfigWidgetFactory):
+        qgis.utils.iface.unregisterMapLayerConfigWidgetFactory(FACTORY)
+        FACTORY = None
+
+
+def settings() -> QSettings:
+    """
+    Returns the Bit Flag Renderer settings.
+    :return: QSettings
+    """
+    settings = QSettings(QSettings.UserScope, 'HU-Berlin', TYPE)
+
+    return settings
+
+
+FACTORY = None
+
+
+class SettingsKeys(enum.Enum):
+    TreeViewState = 'tree_view_state'
+    TreeViewSortColumn = 'tree_view_sort_column'
+    TreeViewSortOrder = 'tree_view_sort_order'
+    BitFlagSchemes = 'bit_flag_schemes'
+
+
+MAX_BITS_PER_PARAMETER = 4
+PATH_UI = os.path.join(os.path.dirname(__file__), 'resources/bitflagrenderer.ui')
+PATH_ABOUT_UI = os.path.join(os.path.dirname(__file__), 'gui/aboutdialog.ui')
+PATH_ICON = os.path.join(os.path.dirname(__file__), *['icons', 'bitflagimage.png'])
+PATH_UI_SAVE_FLAG_SCHEMA = os.path.join(os.path.dirname(__file__), 'gui/saveflagschemadialog.ui')
+TYPE = 'BitFlagRenderer'
+QGIS_RESOURCE_WARNINGS = set()
+
+NEXT_COLOR_HUE_DELTA_CON = 10
+NEXT_COLOR_HUE_DELTA_CAT = 100
