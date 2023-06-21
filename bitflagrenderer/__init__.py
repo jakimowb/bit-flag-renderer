@@ -21,7 +21,6 @@ __version__ = '0.5'
 
 from qgis.PyQt.QtCore import QSettings
 
-import qgis.utils
 from qgis.gui import QgisInterface
 
 TITLE = 'Bit Flag Renderer'
@@ -69,22 +68,6 @@ def classFactory(iface: QgisInterface):  # pylint: disable=invalid-name
     return BitFlagRendererPlugin(iface)
 
 
-def registerConfigWidgetFactory():
-    global FACTORY
-    from .gui.bitflaglayerconfigwidget import BitFlagLayerConfigWidgetFactory
-    if not isinstance(FACTORY, BitFlagLayerConfigWidgetFactory):
-        FACTORY = BitFlagLayerConfigWidgetFactory()
-        qgis.utils.iface.registerMapLayerConfigWidgetFactory(FACTORY)
-
-
-def unregisterConfigWidgetFactory():
-    global FACTORY
-    from .gui.bitflaglayerconfigwidget import BitFlagLayerConfigWidgetFactory
-    if isinstance(FACTORY, BitFlagLayerConfigWidgetFactory):
-        qgis.utils.iface.unregisterMapLayerConfigWidgetFactory(FACTORY)
-        FACTORY = None
-
-
 def settings() -> QSettings:
     """
     Returns the Bit Flag Renderer settings.
@@ -93,9 +76,6 @@ def settings() -> QSettings:
     settings = QSettings(QSettings.UserScope, 'HU-Berlin', TYPE)
 
     return settings
-
-
-FACTORY = None
 
 
 class SettingsKeys(enum.Enum):
