@@ -1,17 +1,16 @@
 from pathlib import Path
 from typing import Dict, Tuple
 
-from qgis.PyQt import uic
-from qgis.PyQt.QtCore import Qt, QMimeData, pyqtSignal
-from qgis.PyQt.QtGui import QClipboard
-from qgis.PyQt.QtWidgets import QHeaderView, QTreeView, QApplication, QAction
 from osgeo import gdal
 
 from bitflagrenderer.core.bitflagmodel import BitFlagModel, BitFlagSortFilterProxyModel
 from bitflagrenderer.core.bitflagscheme import BitFlagParameter, BitFlagScheme
 from bitflagrenderer.core.bitlfagrenderer import BitFlagRenderer
 from bitflagrenderer.gui.bitflagrenderertreeview import BitFlagRendererTreeView
-
+from qgis.PyQt import uic
+from qgis.PyQt.QtCore import Qt, QMimeData, pyqtSignal
+from qgis.PyQt.QtGui import QClipboard
+from qgis.PyQt.QtWidgets import QHeaderView, QTreeView, QApplication
 from qgis.core import Qgis
 from qgis.core import QgsMapLayerProxyModel, QgsProject, QgsMapLayer, QgsRasterLayer
 from qgis.gui import QgsDockWidget, QgsMapLayerComboBox, QgsRasterBandComboBox
@@ -33,7 +32,7 @@ class BitFlagRendererDockWidget(QgsDockWidget):
         self.cbBand: QgsRasterBandComboBox
         self.mProject: QgsProject = None
         self.cbLayer.layerChanged.connect(self.setLayer)
-        self.btnMapTool.setVisible(False)
+
         self.mSchemeCache: Dict[Tuple[str, int], BitFlagScheme] = dict()
 
         self.mSchemeName: str = ''
@@ -62,15 +61,10 @@ class BitFlagRendererDockWidget(QgsDockWidget):
         self.btnAddParameter.setDefaultAction(self.actionAddParameter)
         self.btnCopyBitFlagScheme.setDefaultAction(self.actionCopyBitFlagScheme)
         self.btnPasteBitFlagScheme.setDefaultAction(self.actionPasteBitFlagScheme)
-
+        self.btnShowBitFlags.setDefaultAction(self.actionShowBitFlags)
         self.btnApply.clicked.connect(self.apply)
 
         self.setProject(QgsProject.instance())
-
-    def setMapToolAction(self, action: QAction):
-
-        self.btnMapTool.setDefaultAction(action)
-        self.btnMapTool.setVisible(True)
 
     def restoreModel(self, *args):
         layer = self.layer()

@@ -1,9 +1,10 @@
+from bitflagrenderer.core.utils import BITFLAG_DATA_TYPES
 from qgis.PyQt.QtCore import pyqtSignal, Qt
 from qgis.PyQt.QtWidgets import QAction
-from qgis.core import QgsRasterLayer, QgsCoordinateReferenceSystem, QgsPointXY
+from qgis.PyQt.QtGui import QColor
+from qgis.core import QgsRasterLayer, QgsRasterDataProvider, QgsCoordinateReferenceSystem, QgsPointXY
 from qgis.gui import QgsAbstractMapToolHandler, QgsMapTool, QgsMapToolEmitPoint, QgsMapCanvas, \
     QgsVertexMarker, QgsMapMouseEvent
-from qps.pyqtgraph.pyqtgraph.examples.syntax import QColor
 
 
 class BitFlagMapTool(QgsMapToolEmitPoint):
@@ -59,7 +60,8 @@ class BitFlagMapToolHandler(QgsAbstractMapToolHandler):
 
     def isCompatibleWithLayer(self, layer, context: QgsAbstractMapToolHandler.Context):
         # this tool can only be activated when an editable vector layer is selected
-        if isinstance(layer, QgsRasterLayer):
-            return True
+        if isinstance(layer, QgsRasterLayer) and layer.isValid():
+            dp: QgsRasterDataProvider = layer.dataProvider()
+            return dp.dataType(1) in BITFLAG_DATA_TYPES.keys()
         else:
             return False

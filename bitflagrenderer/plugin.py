@@ -21,6 +21,7 @@ import sys
 from qgis.PyQt.QtCore import Qt
 from qgis.PyQt.QtWidgets import QToolBar
 
+from bitflagrenderer import TITLE
 from bitflagrenderer.gui.bitflagrendererdockwidget import BitFlagRendererDockWidget
 from bitflagrenderer.gui.maptoolhandler import BitFlagMapTool, BitFlagMapToolHandler
 from qgis.PyQt.QtGui import QIcon
@@ -48,20 +49,23 @@ class BitFlagRendererPlugin(object):
         from bitflagrenderer.resources.bitflagrenderer_rc import qInitResources
         qInitResources()
 
-        self.mMapToolAction = QAction('Bit Flags')
-        self.mShowDock = QAction('Bit Flag Dock')
-        self.mShowDock.triggered.connct(self.showDock)
-        self.mMapTool = BitFlagMapTool()
-        self.mMapToolHandler = BitFlagMapToolHandler(self.mMapTool, self.mMapToolAction)
+        self.mMenuName = TITLE
+        self.actionShowDock = QAction('Bit Flag Dock')
+        self.actionShowDock.setIcon(QIcon(':/bitflagrenderer/icons/bitflagimage.png'))
+        self.actionShowDock.setCheckable(True)
+
         self.mWidget = BitFlagRendererDockWidget()
-        self.mWidget.setMapToolAction(self.mMapToolAction)
+        self.mWidget.setToggleVisibilityAction(self.actionShowDock)
+        self.actionShowBitFlags = self.mWidget.actionShowBitFlags
+        self.mMapTool = BitFlagMapTool(iface.mapCanvas())
+        self.mMapToolHandler = BitFlagMapToolHandler(self.mMapTool, self.actionShowBitFlags)
 
         self.mToolBar = QToolBar()
         self.mToolBar.setToolTip('Bit Flag Renderer')
-        self.mToolBar.insertAction(self.mWidget.toggleVisibilityAction())
-        self.mToolBar.insertAction(self.mMapToolAction)
+        self.mToolBar.insertAction(None, self.actionShowDock)
+        self.mToolBar.insertAction(None, self.actionShowBitFlags)
 
-        iface.addDockWidget(self.mWidget, Qt.RightDockWidgetArea)
+        iface.addDockWidget(Qt.RightDockWidgetArea, self.mWidget)
         iface.registerMapToolHandler(self.mMapToolHandler)
 
         self.mAboutAction = QAction(QIcon(':/images/themes/default/mActionPropertiesWidget.svg'), 'About')
@@ -73,6 +77,15 @@ class BitFlagRendererPlugin(object):
         iface.addPluginToRasterMenu(self.mMenuName, self.mAboutAction)
         iface.addPluginToRasterMenu(self.mMenuName, self.mLoadExample)
         iface.addToolBar(self.mToolBar)
+
+    def unload(self):
+        from qgis.utils import iface
+        iface: QgisInterface
+        self.mToolBar.parent()
+        iface.removePluginRasterMenu(self.mMenuName, self.mLoadExample)
+        iface.removePluginRasterMenu(self.mMenuName, self.mAboutAction)
+        iface.unregisterMapToolHandler(self.mMapToolHandler)
+        iface.removeDockWidget(self.mWidget)
 
     def showDock(self):
 
@@ -117,11 +130,3 @@ class BitFlagRendererPlugin(object):
             assert isinstance(canvas, QgsMapCanvas)
             canvas.setDestinationCrs(lyrBQA.crs())
             canvas.setExtent(lyrBQA.extent())
-
-    def unload(self):
-        from qgis.utils import iface
-        iface: QgisInterface
-        iface.removePluginRasterMenu(self.mMenuName, self.mLoadExample)
-        iface.removePluginRasterMenu(self.mMenuName, self.mAboutAction)
-        iface.unregisterMapToolHandler(self.mMapToolHandler)
-        iface.removeDockWidget(self.mWidget)
