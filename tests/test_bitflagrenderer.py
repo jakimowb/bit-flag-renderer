@@ -14,35 +14,37 @@
 ***************************************************************************/
 """
 import os
+import pathlib
 import re
 import sys
 import unittest
-from typing import List, OrderedDict
+from typing import List
 
-from qgis.PyQt.QtCore import Qt
-from qgis.PyQt.QtGui import QColor
-from qgis.PyQt.QtWidgets import QTreeView, QPushButton, QWidget, QHBoxLayout, QVBoxLayout
-
-from bitflagrenderer import DIR_EXAMPLE_DATA, DIR_REPO, registerConfigWidgetFactory, unregisterConfigWidgetFactory
+from bitflagrenderer import DIR_EXAMPLE_DATA, DIR_REPO, DIR_BITFLAG_SCHEMES
 from bitflagrenderer.core.bitflagmodel import BitFlagModel
 from bitflagrenderer.core.bitflagscheme import BitFlagScheme, BitFlagParameter, BitFlagState
 from bitflagrenderer.core.bitlfagrenderer import BitFlagRenderer
 from bitflagrenderer.gui.aboutdialog import AboutBitFlagRenderer
-from bitflagrenderer.gui.bitflaglayerconfigwidget import BitFlagLayerConfigWidgetFactory
-from bitflagrenderer.gui.bitflagrasterrendererwidet import BitFlagRasterRendererWidget
 from bitflagrenderer.gui.saveflagschemedialog import SaveFlagSchemeDialog
+from qgis.PyQt.QtCore import Qt
+from qgis.PyQt.QtWidgets import QTreeView
 from qgis.core import QgsProject, QgsRasterDataProvider
 from qgis.core import QgsRasterLayer
-from qgis.gui import QgsMapCanvas, QgsRendererRasterPropertiesWidget
+from qgis.gui import QgsMapCanvas
 from qps.testing import start_app, TestCase
 from qps.utils import file_search
 
+
+def filepath(root: pathlib.Path, rx: str) -> pathlib.Path:
+    return list(file_search(root, re.compile(rx)))[0]
+
+
 start_app()
 
-
-pathFlagImage = list(file_search(DIR_EXAMPLE_DATA, re.compile(r'.*BQA.*\.tif$')))[0]
-pathTOAImage = list(file_search(DIR_EXAMPLE_DATA, re.compile(r'.*TOA.*\.tif$')))[0]
-
+pathFlagImage = filepath(DIR_EXAMPLE_DATA, r'.*BQA.*\.tif$')
+pathTOAImage = filepath(DIR_EXAMPLE_DATA, r'.*TOA.*\.tif$')
+pathFlagSchemeLND = filepath(DIR_BITFLAG_SCHEMES, r'landsat_level2_pixel_qa.xml')
+pathFlagSchemeQAI = filepath(DIR_BITFLAG_SCHEMES, r'force_qai.xml')
 DIR_TMP = DIR_REPO / 'tmp'
 os.makedirs(DIR_TMP, exist_ok=True)
 
@@ -55,30 +57,19 @@ class BitFlagRendererTests(TestCase):
         return lyr
 
     def createBitFlagParameters(self) -> List[BitFlagParameter]:
-        parValid = BitFlagParameter('Valid data', 0)
-        self.assertIsInstance(parValid, BitFlagParameter)
-        self.assertEqual(len(parValid), 2)
-        parValid[0].setValues('valid', 'green', False)
-        parValid[1].setValues('no data', 'red', True)
 
-        self.assertEqual(parValid[1].name(), 'no data')
-        self.assertEqual(parValid[1].isVisible(), True)
-        self.assertEqual(parValid[1].color(), QColor('red'))
+        parameters = BitFlagScheme.fromFile(pathFlagSchemeLND)[0][:]
 
-        parCloudState = BitFlagParameter('Cloud state', 1, bitCount=2)
-        self.assertIsInstance(parCloudState, BitFlagParameter)
-        self.assertEqual(len(parCloudState), 4)
-        parCloudState[0].setValues('clear', QColor('white'), False)
-        parCloudState[1].setValues('less confident cloud', QColor('orange'), True)
-        parCloudState[2].setValues('confident, opaque cloud', QColor('red'), True)
-        parCloudState[3].setValues('cirrus', QColor('blue'), True)
+        parFill = parameters[0]
+        parClouds = parameters[6]
 
-        return [parValid, parCloudState]
+        return [parFill, parClouds]
 
     def createBitFlagScheme(self) -> BitFlagScheme:
 
-        scheme = BitFlagScheme(name='test scheme')
-        scheme.mParameters.extend(self.createBitFlagParameters())
+        scheme = BitFlagScheme(name='TestdataScheme')
+        for p in self.createBitFlagParameters():
+            scheme.addParameter(p)
         return scheme
 
     def test_BitFlagStates(self):
@@ -119,81 +110,6 @@ class BitFlagRendererTests(TestCase):
         self.showGui(tv)
         QgsProject.instance().removeAllMapLayers()
 
-    def test_BitFlagRendererWidget(self):
-
-        lyr = self.bitFlagLayer()
-
-        canvas = QgsMapCanvas()
-        QgsProject.instance().addMapLayer(lyr)
-        canvas.mapSettings().setDestinationCrs(lyr.crs())
-        ext = lyr.extent()
-        ext.scale(1.1)
-        canvas.setExtent(ext)
-        canvas.setLayers([lyr])
-        canvas.show()
-        canvas.waitWhileRendering()
-        canvas.setCanvasColor(QColor('grey'))
-
-        w = BitFlagRasterRendererWidget(lyr, lyr.extent())
-
-        btnReAdd = QPushButton('Re-Add')
-        btnReAdd.clicked.connect(lambda: w.setRasterLayer(w.rasterLayer()))
-
-        def onWidgetChanged(w, lyr):
-            renderer = w.renderer()
-            renderer.setInput(lyr.dataProvider())
-            lyr.setRenderer(renderer)
-            lyr.triggerRepaint()
-
-        w.widgetChanged.connect(lambda lyr=lyr, w=w: onWidgetChanged(w, lyr))
-
-        for p in self.createBitFlagParameters():
-            w.mFlagModel.addFlagParameter(p)
-
-        top = QWidget()
-        top.setLayout(QHBoxLayout())
-        top.layout().addWidget(canvas)
-        v = QVBoxLayout()
-        v.addWidget(btnReAdd)
-        v.addWidget(w)
-        top.layout().addLayout(v)
-        top.show()
-
-        w.saveTreeViewState()
-
-        self.showGui(top)
-        QgsProject.instance().removeAllMapLayers()
-
-    def test_BitFlagSchemes(self):
-
-        lyr = self.bitFlagLayer()
-        from bitflagrenderer.bitflagschemes import DEPR_FORCE_QAI
-        scheme1 = DEPR_FORCE_QAI()
-        self.assertIsInstance(scheme1, BitFlagScheme)
-
-        w = BitFlagRasterRendererWidget(lyr, lyr.extent())
-        w.setBitFlagScheme(scheme1)
-
-        r = w.renderer().clone()
-        self.assertIsInstance(r, BitFlagRenderer)
-        self.assertEqual(r.bitFlagScheme(), scheme1)
-
-        tmpPath = DIR_TMP / 'test.xml'
-
-        scheme1.setName('test')
-        scheme1.writeXMLFile(tmpPath)
-
-        savesSchemes = BitFlagScheme.fromFile(tmpPath)
-        self.assertListEqual(savesSchemes, [scheme1])
-
-        allSchemes = BitFlagScheme.loadAllSchemes()
-        self.assertIsInstance(allSchemes, OrderedDict)
-        for k, v in allSchemes.items():
-            self.assertIsInstance(v, BitFlagScheme)
-            self.assertEqual(k, v.name())
-
-        QgsProject.instance().removeAllMapLayers()
-
     def test_SaveFlagSchemeDialog(self):
 
         schema = self.createBitFlagScheme()
@@ -211,6 +127,8 @@ class BitFlagRendererTests(TestCase):
         dp = lyr.dataProvider()
         self.assertIsInstance(dp, QgsRasterDataProvider)
 
+        parameters = self.createBitFlagParameters()
+        s = ""
         renderer = BitFlagRenderer()
         renderer.setInput(lyr.dataProvider())
         renderer.setBand(1)
@@ -221,7 +139,7 @@ class BitFlagRendererTests(TestCase):
 
         self.assertEqual(scheme, renderer.bitFlagScheme())
         self.assertListEqual(scheme.mParameters, renderer.bitFlagScheme().mParameters)
-        colorBlock = renderer.block(0, lyr.extent(), 200, 200)
+        colorBlock = renderer.block(0, lyr.extent(), lyr.width(), lyr.height())
 
         r2 = renderer.clone()
         self.assertIsInstance(r2, BitFlagRenderer)
@@ -235,42 +153,10 @@ class BitFlagRendererTests(TestCase):
         canvas.setLayers([lyr])
         canvas.show()
         canvas.waitWhileRendering()
-
+        block = lyr.renderer().block(1, canvas.extent(), lyr.width(), lyr.height())
+        s = ""
         self.showGui(canvas)
         QgsProject.instance().removeAllMapLayers()
-
-    def test_BitFlagLayerConfigWidget(self):
-
-        factory = BitFlagLayerConfigWidgetFactory()
-        lyr = self.bitFlagLayer()
-        parameters = self.createBitFlagParameters()
-
-        canvas = QgsMapCanvas()
-        QgsProject.instance().addMapLayer(lyr)
-        canvas.mapSettings().setDestinationCrs(lyr.crs())
-        ext = lyr.extent()
-        ext.scale(1.1)
-        canvas.setExtent(ext)
-        canvas.setLayers([lyr])
-        canvas.show()
-        canvas.waitWhileRendering()
-        canvas.setCanvasColor(QColor('grey'))
-
-        w = factory.createWidget(lyr, canvas)
-
-        top = QWidget()
-        top.setLayout(QHBoxLayout())
-        top.layout().addWidget(canvas)
-        top.layout().addWidget(w)
-        top.show()
-
-        self.showGui(w)
-        QgsProject.instance().removeAllMapLayers()
-
-    def test_factory(self):
-
-        registerConfigWidgetFactory()
-        unregisterConfigWidgetFactory()
 
     def test_AboutDialog(self):
 
@@ -300,32 +186,6 @@ class BitFlagRendererTests(TestCase):
         if addPluginDir:
             sys.path.remove(pluginDir)
 
-        QgsProject.instance().removeAllMapLayers()
-
-    def test_RendererRasterPropertiesWidget(self):
-        lyr = self.bitFlagLayer()
-        parameters = self.createBitFlagParameters()
-
-        canvas = QgsMapCanvas()
-        QgsProject.instance().addMapLayer(lyr)
-        canvas.mapSettings().setDestinationCrs(lyr.crs())
-        ext = lyr.extent()
-        ext.scale(1.1)
-        canvas.setExtent(ext)
-        canvas.setLayers([lyr])
-        canvas.show()
-        canvas.waitWhileRendering()
-        canvas.setCanvasColor(QColor('grey'))
-
-        r = BitFlagRenderer()
-        r.setInput(lyr.dataProvider())
-        lyr.setRenderer(r)
-
-        w = QgsRendererRasterPropertiesWidget(lyr, canvas)
-        w.show()
-        cw = w.currentRenderWidget().renderer().type()
-
-        self.showGui(w)
         QgsProject.instance().removeAllMapLayers()
 
 

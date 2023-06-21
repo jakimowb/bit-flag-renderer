@@ -1,12 +1,12 @@
 import pathlib
 
+from bitflagrenderer import DIR_RESOURCES
+
 
 def compileResources():
     from qps.resources import compileResourceFiles
 
-    DIR_REPO = pathlib.Path(__file__).parents[1]
-    directories = [DIR_REPO / 'bitflagrenderer',
-                   ]
+    directories = [DIR_RESOURCES]
     for d in directories:
         compileResourceFiles(d)
 

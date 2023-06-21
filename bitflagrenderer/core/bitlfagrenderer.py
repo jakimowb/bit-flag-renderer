@@ -5,10 +5,11 @@ from typing import List
 import numpy as np
 from qgis.PyQt.QtGui import QColor
 from qgis.PyQt.QtXml import QDomDocument, QDomElement
+from qgis.core import QgsRasterInterface
 from qgis.core import QgsSingleBandGrayRenderer, QgsRasterTransparency, QgsRectangle, QgsRasterBlockFeedback, \
     QgsRasterBlock, Qgis, QgsRasterRenderer
 
-from bitflagrenderer.core.utils import QGIS2NUMPY_DATA_TYPES
+from bitflagrenderer.core.utils import QGIS2NUMPY_DATA_TYPES, BITFLAG_DATA_TYPES
 from bitflagrenderer.core.bitflagscheme import BitFlagScheme, BitFlagParameter, BitFlagState
 
 
@@ -19,7 +20,7 @@ class BitFlagRenderer(QgsSingleBandGrayRenderer):
     that inherit QgsRasterRenderer directyl
     """
 
-    def __init__(self, input=None):
+    def __init__(self, input: QgsRasterInterface = None):
         super(BitFlagRenderer, self).__init__(input, 1)
 
         self.mFlagScheme: BitFlagScheme
@@ -80,7 +81,7 @@ class BitFlagRenderer(QgsSingleBandGrayRenderer):
         """ Overwritten from parent class. Items for the legend. """
         transparency = QColor(0, 255, 0, 0)
         items = [(self.bitFlagScheme().name(), transparency)]
-        for parameter in self.bitFlagScheme().mParameters:
+        for parameter in self.bitFlagScheme():
             assert isinstance(parameter, BitFlagParameter)
             visibleStates = [s for s in parameter if s.isVisible()]
             if len(visibleStates) == 0:
@@ -113,42 +114,62 @@ class BitFlagRenderer(QgsSingleBandGrayRenderer):
         color_array = np.frombuffer(output_block.data(), dtype=QGIS2NUMPY_DATA_TYPES[output_block.dataType()])
         color_array[:] = scheme.noDataColor().rgba()
 
-        if len(self.bitFlagScheme()) == 0:
+        if len(self.bitFlagScheme()) == 0 or self.input().dataType(self.mBand) not in BITFLAG_DATA_TYPES.keys():
             output_block.setData(color_array.tobytes())
             return output_block
 
         npx = height * width
 
-        band_block = self.input().block(self.mBand, extent, width, height)
-        assert isinstance(band_block, QgsRasterBlock)
+        band_block: QgsRasterBlock = self.input().block(self.mBand, extent, width, height)
         band_data = np.frombuffer(band_block.data(), dtype=QGIS2NUMPY_DATA_TYPES[band_block.dataType()])
         assert len(band_data) == npx
+
         # THIS! seems to be a very fast way to convert block data into a numpy array
         # block_data[b, :] = band_data
 
+        # if True:
+        #    band_values = np.unique(band_data)
+        #    print(band_values)
+        #    print([bin(v) for v in band_values])
+
         parameterNumbers = np.zeros(band_data.shape, dtype=np.uint8)
-        for i, flagParameter in enumerate(sorted(self.bitFlagScheme(), key=lambda fp: (fp.zValue(), fp.firstBit()))):
-            b0 = flagParameter.firstBit()
+        for i, p in enumerate(reversed(self.bitFlagScheme())):
+            p: BitFlagParameter
 
             # extract the parameter number
-            for b in range(flagParameter.bitCount()):
-                mask = 1 << (flagParameter.firstBit() + b)
+            for b in range(p.bitCount()):
+                mask = 1 << (p.firstBit() + b)
                 parameterNumbers += 2 ** b * np.uint8((band_data & mask) != 0)
 
             # compare each flag state
-            for j, flagState in enumerate(flagParameter):
+            for j, flagState in enumerate(p):
+                flagState: BitFlagState
                 if not flagState.isVisible():
                     continue
                 color_array[np.where(parameterNumbers == flagState.bitNumber())[0]] = flagState.color().rgb()
 
             parameterNumbers.fill(0)
+
+        if False:
+            for i, p in enumerate(reversed(self.bitFlagScheme())):
+                # extract the parameter number
+                for b in range(p.bitCount()):
+                    mask = 1 << (p.firstBit() + b)
+                    parameterNumbers += 2 ** b * np.uint8((band_data & mask) != 0)
+
+                # compare each flag state
+                for j, flagState in enumerate(p):
+                    if not flagState.isVisible():
+                        continue
+                    color_array[np.where(parameterNumbers == flagState.bitNumber())[0]] = flagState.color().rgb()
+
+                parameterNumbers.fill(0)
         output_block.setData(color_array.tobytes())
         return output_block
 
     def clone(self) -> QgsRasterRenderer:
         """ Overwritten from parent class. """
-        r = BitFlagRenderer()
+        r = BitFlagRenderer(self.input())
         scheme = copy.deepcopy(self.bitFlagScheme())
         r.setBitFlagScheme(scheme)
-
         return r

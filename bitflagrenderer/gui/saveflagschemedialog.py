@@ -18,7 +18,7 @@ class SaveFlagSchemeDialog(QDialog):
         if d.exec_() == QDialog.Accepted:
             schema = copy.deepcopy(schema)
             schema.setName(d.schemaName())
-            schema.writeXMLFile(d.filePath())
+            schema.writeXmlFile(d.filePath())
 
     def __init__(self, schema: BitFlagScheme, parent=None):
         super(SaveFlagSchemeDialog, self).__init__(parent=parent)

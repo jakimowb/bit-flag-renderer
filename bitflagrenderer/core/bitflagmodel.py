@@ -1,13 +1,12 @@
-import bisect
 import re
 from typing import List, Iterator, Any
 
-from qgis.PyQt.QtCore import QAbstractItemModel, QModelIndex, Qt, QSortFilterProxyModel
-from qgis.PyQt.QtGui import QColor
-
 from bitflagrenderer import MAX_BITS_PER_PARAMETER
-from bitflagrenderer.core.utils import contrastColor
 from bitflagrenderer.core.bitflagscheme import BitFlagParameter, BitFlagState
+from bitflagrenderer.core.utils import contrastColor
+from qgis.PyQt.QtCore import QAbstractItemModel, QModelIndex, Qt, QSortFilterProxyModel
+from qgis.PyQt.QtCore import QMimeData
+from qgis.PyQt.QtGui import QColor
 
 
 class BitFlagModel(QAbstractItemModel):
@@ -28,14 +27,14 @@ class BitFlagModel(QAbstractItemModel):
 
         self.mColumnToolTips: List[str] = [
             'The Flag Parameters bit position(s), e.g. "0" or "1-2"',
-            'Flag Parameter / Flag State name',
-            'Bit combination of the Flag State',
-            "Number of bit combination within a Flag states's possible bit combinations",
-            "Color of Flag State or Z-Value for colors of a Flag Parameter"
+            'Name of flag parameter or its different flag states',
+            'Flag state bit combination',
+            "Flag state  of bit combination within a Flag statess possible bit combinations",
+            "Flag State Color"
         ]
 
-    def columnNames(self):
-        return
+    def columnNames(self) -> List[str]:
+        return self.mColumnNames
 
     def __contains__(self, item):
         return item in self.mFlagParameters
@@ -74,18 +73,90 @@ class BitFlagModel(QAbstractItemModel):
     def columnCount(self, parent: QModelIndex = QModelIndex()) -> int:
         return len(self.mColumnNames)
 
-    def addFlagParameter(self, flagParameter: BitFlagParameter):
-        row = bisect.bisect(self.mFlagParameters, flagParameter)
-        self.beginInsertRows(self.mRootIndex, row, row)
-        self.mFlagParameters.insert(row, flagParameter)
-        self.endInsertRows()
+    def addFlagParameter(self, flagParameter: BitFlagParameter) -> bool:
+        row = len(self.mFlagParameters)
+        if flagParameter not in self.mFlagParameters:
+            self.beginInsertRows(self.mRootIndex, row, row)
+            self.mFlagParameters.insert(row, flagParameter)
+            self.endInsertRows()
+            return True
+        else:
+            return False
 
-    def removeFlagParameter(self, flagParameter: BitFlagParameter):
+    def supportedDragActions(self):
+        return Qt.MoveAction  # | Qt.CopyAction
+
+    def supportedDropActions(self):
+        return Qt.MoveAction  # | Qt.CopyAction
+
+    def canDropMimeData(self, mimeData: QMimeData, action: Qt.DropAction, row, column, index: QModelIndex):
+
+        if action not in [Qt.MoveAction, Qt.CopyAction, Qt.IgnoreAction]:
+            return False
+
+        # print((index.row(), index.column(), index.internalPointer(), index == self.mRootIndex))
+        return index == self.mRootIndex
+
+    def dropMimeData(self, mimeData: QMimeData, action: Qt.DropAction, row, column, index: QModelIndex):
+
+        if action == Qt.IgnoreAction:
+            return True
+
+        parameters = BitFlagParameter.fromMimeData(mimeData)
+
+        if index != self.mRootIndex:
+            return False
+
+        if len(parameters) > 0:
+            self.beginInsertRows(index, row, row + len(parameters) - 1)
+            for p in reversed(parameters):
+                self.mFlagParameters.insert(row, p)
+            self.endInsertRows()
+
+            return True
+        else:
+            return False
+
+    def mimeData(self, indices: List[QModelIndex]) -> QMimeData:
+
+        parameters = []
+        for idx in indices:
+            p: BitFlagParameter = self.data(idx, Qt.UserRole)
+            assert isinstance(p, BitFlagParameter)
+            if p not in parameters:
+                parameters.append(p)
+        return BitFlagParameter.mimeData(parameters)
+
+    def insertRows(self, *args, **kwds):
+
+        s = ""
+
+    def removeRows(self, row: int, count: int, index: QModelIndex) -> bool:
+
+        if index == self.mRootIndex:
+            self.beginRemoveRows(index, row, row + count - 1)
+            while count > 0:
+                del self.mFlagParameters[row]
+                count -= 1
+            self.endRemoveRows()
+            return True
+        return False
+
+    def moveRows(self, *args, **kwds):
+        s = ""
+        return False
+
+    def removeFlagParameter(self, flagParameter: BitFlagParameter) -> bool:
         if flagParameter in self.mFlagParameters:
             row = self.mFlagParameters.index(flagParameter)
-            self.beginRemoveRows(self.mRootIndex, row, row)
-            self.mFlagParameters.remove(flagParameter)
-            self.endRemoveRows()
+            return self.removeRows(row, 1, self.mRootIndex)
+        else:
+            return False
+
+    def parameter2index(self, parameter: BitFlagParameter) -> QModelIndex:
+        assert parameter in self.mFlagParameters
+        r = self.mFlagParameters.index(parameter)
+        return self.createIndex(r, 0, parameter)
 
     def headerData(self, section, orientation, role):
         assert isinstance(section, int)
@@ -102,21 +173,30 @@ class BitFlagModel(QAbstractItemModel):
         return None
 
     def flags(self, index: QModelIndex) -> Qt.ItemFlags:
+        if index == self.mRootIndex:
+            return Qt.ItemIsDropEnabled
         if not index.isValid():
             return Qt.NoItemFlags
 
         cName = self.mColumnNames[index.column()]
 
+        item = index.internalPointer()
+
         flags = Qt.ItemIsEnabled | Qt.ItemIsSelectable
-        if isinstance(index.internalPointer(), (BitFlagParameter, BitFlagState)) and index.column() == 0:
+        if isinstance(item, (BitFlagParameter, BitFlagState)) and index.column() == 0:
             flags = flags | Qt.ItemIsUserCheckable
 
         if cName == self.cnName:
             flags = flags | Qt.ItemIsEditable
 
-        if isinstance(index.internalPointer(), BitFlagParameter) and cName in [self.cnBitPosition, self.cnColor]:
-            flags = flags | Qt.ItemIsEditable
+        if isinstance(item, BitFlagParameter):
+            flags = flags | Qt.ItemIsDragEnabled  # | Qt.ItemIsDropEnabled
 
+            if cName in [self.cnBitPosition]:
+                flags = flags | Qt.ItemIsEditable
+
+        if index == self.mRootIndex:
+            flags = flags | Qt.ItemIsDropEnabled
         return flags
 
     def parent(self, child: QModelIndex) -> QModelIndex:
@@ -151,7 +231,10 @@ class BitFlagModel(QAbstractItemModel):
         if parent.parent() == self.mRootIndex:
             # sub 1 -> return FlagState
             flagParameter = self[parent.row()]
-            return self.createIndex(row, column, flagParameter[row])
+            if row < len(flagParameter):
+                return self.createIndex(row, column, flagParameter[row])
+            else:
+                return self.createIndex(row, column)
         return QModelIndex()
 
     def data(self, index: QModelIndex, role: int) -> Any:
@@ -172,12 +255,6 @@ class BitFlagModel(QAbstractItemModel):
                         return '{}-{}'.format(item.firstBit(), item.lastBit())
                 if cName == self.cnName:
                     return item.name()
-
-            if cName == self.cnColor:
-                if role == Qt.DisplayRole:
-                    return f'Z={item.zValue()}'
-                elif role == Qt.EditRole:
-                    return item.zValue()
 
             if role == Qt.ToolTipRole:
                 if cName == self.cnName:
@@ -277,7 +354,7 @@ class BitFlagModel(QAbstractItemModel):
                     # apply new checkstate downwards to all FlagStates
                     for row in range(len(item)):
                         if row == 0:  # row 0 = empty flag -> consider higher values only
-                            continue
+                            pass  # continue
                         stateIndex = self.index(row, 0, index)
                         if self.data(stateIndex, Qt.CheckStateRole) != value:
                             self.setData(stateIndex, value, Qt.CheckStateRole)
