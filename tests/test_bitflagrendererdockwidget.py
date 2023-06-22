@@ -83,8 +83,10 @@ class DockWidgetTestCases(BitFlagTestCases):
                 p.removeChildNode(n)
 
         w.cbLayer.layerChanged.connect(reorderLayers)
+
         mw.addDockWidget(Qt.RightDockWidgetArea, w)
 
+        w.setAutoApply(False)
         w.setLayer(lyr1)
 
         w.addParameter()
@@ -94,6 +96,9 @@ class DockWidgetTestCases(BitFlagTestCases):
         scheme = w.bitFlagScheme()
         self.assertIsInstance(scheme, BitFlagScheme)
         self.assertTrue(len(scheme) == 3)
+
+        point = lyr1.extent().center()
+        w.loadBitFlags(lyr1.crs(), point)
 
         renderer = w.bitFlagRenderer(lyr1)
         self.assertIsInstance(renderer, BitFlagRenderer)
@@ -105,7 +110,7 @@ class DockWidgetTestCases(BitFlagTestCases):
         pathFlagSchemeLND = filepath(DIR_BITFLAG_SCHEMES, r'landsat_level2_pixel_qa.xml')
         scheme = BitFlagScheme.fromFile(pathFlagSchemeLND)[0]
         w.setBitFlagScheme(scheme)
-        w.apply()
+        w.setAutoApply(True)
         self.showGui(mw)
 
         project.removeAllMapLayers()

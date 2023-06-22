@@ -13,6 +13,15 @@ from qgis.PyQt import uic
 from qgis.core import Qgis
 
 
+def rgba_to_argb(rgba):
+    red = (rgba >> 24) & 0xFF
+    green = (rgba >> 16) & 0xFF
+    blue = (rgba >> 8) & 0xFF
+    alpha = rgba & 0xFF
+    argb = (alpha << 24) | (red << 16) | (green << 8) | blue
+    return argb
+
+
 def contrastColor(c: QColor) -> QColor:
     """
     Returns a QColor with good contrast to the input color c
@@ -20,7 +29,7 @@ def contrastColor(c: QColor) -> QColor:
     :return: QColor
     """
     assert isinstance(c, QColor)
-    if c.lightness() < 0.5:
+    if c.lightnessF() < 0.5:
         return QColor('white')
     else:
         return QColor('black')
@@ -173,3 +182,10 @@ BITFLAG_DATA_TYPES = {q: n for q, n in QGIS2NUMPY_DATA_TYPES.items() if q in [
     Qgis.DataType.Int8, Qgis.DataType.Int16, Qgis.DataType.Int32,
     Qgis.DataType.UInt16, Qgis.DataType.UInt32,
 ]}
+
+
+def bit_string(value: int) -> str:
+    """
+    Returns the bit representation of a number
+    """
+    return bin(value)[2:]

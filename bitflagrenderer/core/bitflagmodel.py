@@ -1,19 +1,23 @@
 import re
-from typing import List, Iterator, Any
+from typing import List, Iterator, Any, Union
 
 from bitflagrenderer import MAX_BITS_PER_PARAMETER
 from bitflagrenderer.core.bitflagscheme import BitFlagParameter, BitFlagState
 from bitflagrenderer.core.utils import contrastColor
 from qgis.PyQt.QtCore import QAbstractItemModel, QModelIndex, Qt, QSortFilterProxyModel
-from qgis.PyQt.QtCore import QMimeData
+from qgis.PyQt.QtCore import QMimeData, pyqtSignal
 from qgis.PyQt.QtGui import QColor
 
 
 class BitFlagModel(QAbstractItemModel):
+    combinedFlagsColorChanged = pyqtSignal(QColor)
 
     def __init__(self, *args, **kwds):
         super(BitFlagModel, self).__init__(*args, **kwds)
         self.mFlagParameters = []
+
+        self.mCombineFlags: bool = False
+        self.mCombinedFlagsColor: QColor = QColor('blue')
 
         self.cnBitPosition = 'Bit No.'
         self.cnName = 'Name'
@@ -32,6 +36,35 @@ class BitFlagModel(QAbstractItemModel):
             "Flag state  of bit combination within a Flag statess possible bit combinations",
             "Flag State Color"
         ]
+
+    def setCombineFlags(self, b: bool):
+
+        if self.mCombineFlags != b:
+            # this changes all colors
+            self.mCombineFlags = b
+            self._updateColors()
+
+    def _updateColors(self):
+        c = self.columnNames().index(self.cnColor)
+        for p in self.mFlagParameters:
+            idx = self.parameter2index(p)
+            for r in range(self.rowCount(idx)):
+                idx2 = self.index(r, c, idx)
+                self.dataChanged.emit(idx2, idx2)
+
+    def combineFlags(self) -> bool:
+        return self.mCombineFlags
+
+    def setCombinedFlagsColor(self, c: Union[QColor, str]):
+
+        c = QColor(c)
+        if c != self.mCombinedFlagsColor:
+            self.mCombinedFlagsColor = c
+            self._updateColors()
+            self.combinedFlagsColorChanged.emit(c)
+
+    def combinedFlagsColor(self) -> QColor:
+        return self.mCombinedFlagsColor
 
     def columnNames(self) -> List[str]:
         return self.mColumnNames
@@ -244,6 +277,8 @@ class BitFlagModel(QAbstractItemModel):
 
         item = index.internalPointer()
         cName = self.mColumnNames[index.column()]
+
+        cColor: QColor = self.combinedFlagsColor()
         if isinstance(item, BitFlagParameter):
 
             if role in [Qt.DisplayRole, Qt.EditRole]:
@@ -259,6 +294,13 @@ class BitFlagModel(QAbstractItemModel):
             if role == Qt.ToolTipRole:
                 if cName == self.cnName:
                     return item.name()
+                if cName == self.cnColor:
+                    return 'Flag color'
+                if cName == self.cnBitPosition:
+                    return 'Bit position'
+
+                if cName == self.cnBitComb:
+                    return 'Parameter bits'
 
             if role == Qt.CheckStateRole and index.column() == 0:
                 # consider all states except of the first (empty bit)
@@ -296,15 +338,18 @@ class BitFlagModel(QAbstractItemModel):
                     return item.name()
 
                 if cName == self.cnColor:
-                    return item.color().name()
+                    color = cColor if self.mCombineFlags else item.color()
+                    return color.name(QColor.HexArgb)
 
             if role == Qt.BackgroundColorRole:
                 if cName == self.cnColor:
-                    return item.color()
+                    color = cColor if self.mCombineFlags else item.color()
+                    return color
 
             if role == Qt.TextColorRole:
                 if cName == self.cnColor:
-                    return contrastColor(item.color())
+                    color = cColor if self.mCombineFlags else item.color()
+                    return contrastColor(color)
 
             if role == Qt.TextAlignmentRole:
                 if cName in [self.cnBitNum, self.cnBitComb]:
@@ -345,16 +390,20 @@ class BitFlagModel(QAbstractItemModel):
                     result = True
 
                 if cName == self.cnColor:
-                    item.setColor(QColor(value))
-                    result = True
+                    color = QColor(value)
+                    if self.combineFlags():
+                        self.setCombinedFlagsColor(color)
+                    else:
+                        item.setColor(color)
+                        result = True
 
         if isinstance(item, BitFlagParameter):
             if role == Qt.CheckStateRole and index.column() == 0:
                 if value in [Qt.Checked, Qt.Unchecked]:
-                    # apply new checkstate downwards to all FlagStates
+                    # apply new check state downwards to all FlagStates
                     for row in range(len(item)):
-                        if row == 0:  # row 0 = empty flag -> consider higher values only
-                            pass  # continue
+                        # if row == 0:  # row 0 = empty flag -> consider higher values only
+                        #    pass  # continue
                         stateIndex = self.index(row, 0, index)
                         if self.data(stateIndex, Qt.CheckStateRole) != value:
                             self.setData(stateIndex, value, Qt.CheckStateRole)
@@ -363,10 +412,6 @@ class BitFlagModel(QAbstractItemModel):
             if role == Qt.EditRole:
                 if cName == self.cnName:
                     item.setName(str(value))
-                    result = True
-
-                if cName == self.cnColor:
-                    item.setZValue(int(value))
                     result = True
 
                 if cName == self.cnBitPosition:

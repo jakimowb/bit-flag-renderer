@@ -6,14 +6,16 @@ from osgeo import gdal
 from bitflagrenderer.core.bitflagmodel import BitFlagModel, BitFlagSortFilterProxyModel
 from bitflagrenderer.core.bitflagscheme import BitFlagParameter, BitFlagScheme
 from bitflagrenderer.core.bitlfagrenderer import BitFlagRenderer
+from bitflagrenderer.core.utils import bit_string, BITFLAG_DATA_TYPES
 from bitflagrenderer.gui.bitflagrenderertreeview import BitFlagRendererTreeView
 from qgis.PyQt import uic
 from qgis.PyQt.QtCore import Qt, QMimeData, pyqtSignal
 from qgis.PyQt.QtGui import QClipboard
-from qgis.PyQt.QtWidgets import QHeaderView, QTreeView, QApplication
-from qgis.core import Qgis
-from qgis.core import QgsMapLayerProxyModel, QgsProject, QgsMapLayer, QgsRasterLayer
-from qgis.gui import QgsDockWidget, QgsMapLayerComboBox, QgsRasterBandComboBox
+from qgis.PyQt.QtWidgets import QHeaderView, QTreeView, QApplication, QLineEdit
+from qgis.core import QgsPointXY, QgsCoordinateReferenceSystem, QgsRasterDataProvider, QgsRaster, \
+    QgsCoordinateTransform, QgsRasterIdentifyResult, QgsRasterRenderer
+from qgis.core import Qgis, QgsMapLayerProxyModel, QgsProject, QgsMapLayer, QgsRasterLayer
+from qgis.gui import QgsDockWidget, QgsMapLayerComboBox, QgsRasterBandComboBox, QgsColorButton
 
 
 class BitFlagRendererDockWidget(QgsDockWidget):
@@ -40,6 +42,9 @@ class BitFlagRendererDockWidget(QgsDockWidget):
         self.mFlagModel.dataChanged.connect(self.bitFlagSchemeChanged)
         self.mFlagModel.rowsRemoved.connect(self.bitFlagSchemeChanged)
         self.mFlagModel.rowsInserted.connect(self.bitFlagSchemeChanged)
+        self.mFlagModel.modelReset.connect(self.bitFlagSchemeChanged)
+        self.mFlagModel.combinedFlagsColorChanged.connect(self.bitFlagSchemeChanged)
+
         self.bitFlagSchemeChanged.connect(self.onBitFlagSchemeChanged)
         self.mProxyModel = BitFlagSortFilterProxyModel()
         self.mProxyModel.setSourceModel(self.mFlagModel)
@@ -55,6 +60,9 @@ class BitFlagRendererDockWidget(QgsDockWidget):
         self.actionAddParameter.triggered.connect(self.addParameter)
         self.actionCopyBitFlagScheme.triggered.connect(self.copyBitFlagScheme)
         self.actionPasteBitFlagScheme.triggered.connect(self.pasteBitFlagScheme)
+        self.mFlagModel.setCombineFlags(False)
+        self.actionCombineBitFlags.setChecked(False)
+        self.actionCombineBitFlags.toggled.connect(self.mFlagModel.setCombineFlags)
 
         QApplication.instance().clipboard().dataChanged.connect(self.updateWidgets)
         self.btnRemoveParameters.setDefaultAction(self.actionRemoveParameters)
@@ -62,21 +70,60 @@ class BitFlagRendererDockWidget(QgsDockWidget):
         self.btnCopyBitFlagScheme.setDefaultAction(self.actionCopyBitFlagScheme)
         self.btnPasteBitFlagScheme.setDefaultAction(self.actionPasteBitFlagScheme)
         self.btnShowBitFlags.setDefaultAction(self.actionShowBitFlags)
-        self.btnApply.clicked.connect(self.apply)
+        self.btnCombineBitFlags.setDefaultAction(self.actionCombineBitFlags)
+        self.btnNoDataColor: QgsColorButton
+        self.btnNoDataColor.setToNoColor()
+        self.btnNoDataColor.colorChanged.connect(self.bitFlagSchemeChanged.emit)
 
+        self.btnApply.clicked.connect(self.apply)
+        self.cbLiveUpdate.toggled.connect(self.liveUpdateToggled)
         self.setProject(QgsProject.instance())
+
+    def liveUpdateToggled(self, b: bool):
+        if b:
+            self.apply()
+
+    def loadBitFlags(self, crs: QgsCoordinateReferenceSystem, point: QgsPointXY):
+        lyr = self.layer()
+        if isinstance(lyr, QgsRasterLayer):
+            band = self.band()
+            dp: QgsRasterDataProvider = lyr.dataProvider()
+
+            if dp.dataType(band) in BITFLAG_DATA_TYPES.keys():
+                if crs != lyr.crs():
+                    trans = QgsCoordinateTransform()
+                    trans.setSourceCrs(crs)
+                    trans.setDestinationCrs(lyr.crs())
+                    point = trans.transform(point)
+
+                point = point
+                values: QgsRasterIdentifyResult = dp.identify(point, QgsRaster.IdentifyFormatValue)
+                if values.isValid():
+                    pixelvalue = values.results().get(band, None)
+                    if pixelvalue:
+                        self.tbCursorValue: QLineEdit
+                        self.tbCursorValue.setText(bit_string(int(pixelvalue)))
+            s = ""
 
     def restoreModel(self, *args):
         layer = self.layer()
         band = self.band()
         key = (layer.id(), band)
-        if key in self.mSchemeCache.keys():
-            scheme = self.mSchemeCache[key]
-            self.setBitFlagScheme(scheme)
+        r: QgsRasterRenderer = layer.renderer()
+        if isinstance(r, BitFlagRenderer):
+            self.setBitFlagScheme(r.bitFlagScheme())
+        else:
+            self.setBitFlagScheme(self.mSchemeCache.get(key, BitFlagScheme(name=layer.name())))
 
     def onBitFlagSchemeChanged(self):
-        if self.cbLiveUpdate.isChecked():
+        if self.autoApply():
             self.apply()
+
+    def autoApply(self) -> bool:
+        return self.cbLiveUpdate.isChecked()
+
+    def setAutoApply(self, b: bool):
+        self.cbLiveUpdate.setChecked(b)
 
     def copyBitFlagScheme(self):
 
@@ -205,10 +252,12 @@ class BitFlagRendererDockWidget(QgsDockWidget):
     def setBitFlagScheme(self, scheme: BitFlagScheme):
 
         self.mSchemeName = scheme.name()
-        self.actionCombineFlags.setChecked(scheme.combineFlags())
-        self.btnCombinedFlagsColor.setColor(scheme.combinedFlagsColor())
+        self.actionCombineBitFlags.setChecked(scheme.combineFlags())
+        self.btnNoDataColor.setColor(scheme.noDataColor())
 
         self.flagModel().clear()
+        self.flagModel().setCombinedFlagsColor(scheme.combinedFlagsColor())
+        self.flagModel().setCombineFlags(scheme.combineFlags())
         for p in scheme:
             self.flagModel().addFlagParameter(p)
 
@@ -219,8 +268,9 @@ class BitFlagRendererDockWidget(QgsDockWidget):
 
         scheme = BitFlagScheme()
         scheme.setName(self.mSchemeName)
-        scheme.setCombineFlags(self.actionCombineFlags.isChecked())
-        scheme.setCombinedFlagsColor(self.btnCombinedFlagsColor.color())
+        scheme.setCombineFlags(self.mFlagModel.combineFlags())
+        scheme.setCombinedFlagsColor(self.mFlagModel.combinedFlagsColor())
+        scheme.setNoDataColor(self.btnNoDataColor.color())
 
         for p in self.flagModel():
             scheme.addParameter(p)

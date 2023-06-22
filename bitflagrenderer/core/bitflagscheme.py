@@ -12,13 +12,6 @@ from .. import DIR_BITFLAG_SCHEMES
 from .utils import nextColor
 
 
-def bit_string(value: int) -> str:
-    """
-    Returns the bit representation of a number
-    """
-    return bin(value)[2:]
-
-
 class BitFlagState(object):
 
     @staticmethod
@@ -504,7 +497,7 @@ class BitFlagScheme(object):
         scheme = BitFlagScheme()
         scheme.setName(element.attribute('name'))
         scheme.setNoDataColor(element.attribute('noDataColor'))
-        scheme.setCombineFlags(element.attribute('combineFlags') not in ['0', 0, False])
+        scheme.setCombineFlags(element.attribute('combineFlags') not in ['', '0', 0, False])
         scheme.setCombinedFlagsColor(element.attribute('combinedFlagsColor'))
 
         parameters = BitFlagParameter.fromXml(element)

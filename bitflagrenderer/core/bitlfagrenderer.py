@@ -3,14 +3,14 @@ import pickle
 from typing import List
 
 import numpy as np
+
+from bitflagrenderer.core.bitflagscheme import BitFlagScheme, BitFlagParameter, BitFlagState
+from bitflagrenderer.core.utils import QGIS2NUMPY_DATA_TYPES, BITFLAG_DATA_TYPES
 from qgis.PyQt.QtGui import QColor
 from qgis.PyQt.QtXml import QDomDocument, QDomElement
 from qgis.core import QgsRasterInterface
 from qgis.core import QgsSingleBandGrayRenderer, QgsRasterTransparency, QgsRectangle, QgsRasterBlockFeedback, \
     QgsRasterBlock, Qgis, QgsRasterRenderer
-
-from bitflagrenderer.core.utils import QGIS2NUMPY_DATA_TYPES, BITFLAG_DATA_TYPES
-from bitflagrenderer.core.bitflagscheme import BitFlagScheme, BitFlagParameter, BitFlagState
 
 
 class BitFlagRenderer(QgsSingleBandGrayRenderer):
@@ -110,7 +110,8 @@ class BitFlagRenderer(QgsSingleBandGrayRenderer):
         nb = self.input().bandCount()
         scheme = self.bitFlagScheme()
 
-        output_block = QgsRasterBlock(Qgis.ARGB32_Premultiplied, width, height)
+        #  output_block = QgsRasterBlock(Qgis.ARGB32_Premultiplied, width, height)
+        output_block = QgsRasterBlock(Qgis.ARGB32, width, height)
         color_array = np.frombuffer(output_block.data(), dtype=QGIS2NUMPY_DATA_TYPES[output_block.dataType()])
         color_array[:] = scheme.noDataColor().rgba()
 
@@ -127,11 +128,6 @@ class BitFlagRenderer(QgsSingleBandGrayRenderer):
         # THIS! seems to be a very fast way to convert block data into a numpy array
         # block_data[b, :] = band_data
 
-        # if True:
-        #    band_values = np.unique(band_data)
-        #    print(band_values)
-        #    print([bin(v) for v in band_values])
-
         parameterNumbers = np.zeros(band_data.shape, dtype=np.uint8)
         for i, p in enumerate(reversed(self.bitFlagScheme())):
             p: BitFlagParameter
@@ -146,24 +142,15 @@ class BitFlagRenderer(QgsSingleBandGrayRenderer):
                 flagState: BitFlagState
                 if not flagState.isVisible():
                     continue
-                color_array[np.where(parameterNumbers == flagState.bitNumber())[0]] = flagState.color().rgb()
+
+                if scheme.combineFlags():
+                    rgba = scheme.combinedFlagsColor().rgba()
+                else:
+                    rgba = flagState.color().rgba()
+                color_array[np.where(parameterNumbers == flagState.bitNumber())[0]] = rgba
 
             parameterNumbers.fill(0)
 
-        if False:
-            for i, p in enumerate(reversed(self.bitFlagScheme())):
-                # extract the parameter number
-                for b in range(p.bitCount()):
-                    mask = 1 << (p.firstBit() + b)
-                    parameterNumbers += 2 ** b * np.uint8((band_data & mask) != 0)
-
-                # compare each flag state
-                for j, flagState in enumerate(p):
-                    if not flagState.isVisible():
-                        continue
-                    color_array[np.where(parameterNumbers == flagState.bitNumber())[0]] = flagState.color().rgb()
-
-                parameterNumbers.fill(0)
         output_block.setData(color_array.tobytes())
         return output_block
 

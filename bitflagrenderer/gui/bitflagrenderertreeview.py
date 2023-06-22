@@ -1,6 +1,6 @@
 from qgis.PyQt.QtCore import Qt, QModelIndex
-from qgis.PyQt.QtGui import QContextMenuEvent
-from qgis.PyQt.QtWidgets import QTreeView, QMenu
+from qgis.PyQt.QtGui import QContextMenuEvent, QColor
+from qgis.PyQt.QtWidgets import QTreeView, QMenu, QAction
 
 from bitflagrenderer.core.bitflagscheme import BitFlagState
 from bitflagrenderer.core.bitflagmodel import BitFlagModel
@@ -30,7 +30,8 @@ class BitFlagRendererTreeView(QTreeView):
             a.triggered.connect(lambda *args, idx=cidx: self.onEditRequest(idx))
 
         if cname == flagModel.cnColor and isinstance(cidx.data(role=Qt.UserRole), BitFlagState):
-            a = m.addAction('Set Color')
+            a: QAction = m.addAction('Set Color')
+            a.setEnabled(not flagModel.combineFlags())
             a.triggered.connect(lambda *args, idx=cidx: self.showColorDialog(idx))
 
         return m
@@ -56,11 +57,17 @@ class BitFlagRendererTreeView(QTreeView):
         # other actions handled by base-class
 
     def showColorDialog(self, idx: QModelIndex):
-        item = idx.data(role=Qt.UserRole)
-        if isinstance(item, BitFlagState):
-            c = QgsColorDialog.getColor(item.color(), self,
-                                        allowOpacity=True,
-                                        title='Set color for "{}"'.format(item.name()))
 
-            if c.isValid():
-                self.model().setData(idx, c, role=Qt.EditRole)
+        if idx.flags() & Qt.ItemIsEditable != 0:
+            color: QColor = idx.data(Qt.BackgroundColorRole)
+
+            item = idx.data(role=Qt.UserRole)
+            title = 'Set color'
+
+            if isinstance(item, BitFlagState):
+                title += f' for "{item.name()}"'
+
+            color2 = QgsColorDialog.getColor(initialColor=color, parent=self, allowOpacity=True, title=title)
+            if color2.isValid():
+                flagModel: BitFlagModel = self.model().sourceModel()
+                self.model().setData(idx, color2, role=Qt.EditRole)
