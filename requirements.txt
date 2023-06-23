@@ -7,7 +7,6 @@ gdal
 numpy>=1.15
 
 # unit testing
-nose2
-unittest-xml-reporting
+pytest
 
 
