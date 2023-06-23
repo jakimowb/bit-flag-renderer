@@ -12,9 +12,9 @@ from qgis.PyQt import uic
 from qgis.PyQt.QtCore import Qt, QMimeData, pyqtSignal
 from qgis.PyQt.QtGui import QClipboard
 from qgis.PyQt.QtWidgets import QHeaderView, QTreeView, QApplication, QLineEdit
-from qgis.core import QgsPointXY, QgsCoordinateReferenceSystem, QgsRasterDataProvider, QgsRaster, \
-    QgsCoordinateTransform, QgsRasterIdentifyResult, QgsRasterRenderer
 from qgis.core import Qgis, QgsMapLayerProxyModel, QgsProject, QgsMapLayer, QgsRasterLayer
+from qgis.core import QgsPointXY, QgsRasterDataProvider, QgsRaster, \
+    QgsRasterIdentifyResult, QgsRasterRenderer
 from qgis.gui import QgsDockWidget, QgsMapLayerComboBox, QgsRasterBandComboBox, QgsColorButton
 
 
@@ -83,18 +83,20 @@ class BitFlagRendererDockWidget(QgsDockWidget):
         if b:
             self.apply()
 
-    def loadBitFlags(self, crs: QgsCoordinateReferenceSystem, point: QgsPointXY):
+    def loadBitFlags(self, layer: QgsRasterLayer, point: QgsPointXY):
+        if not isinstance(layer, QgsRasterLayer):
+            return
+
         lyr = self.layer()
+        if lyr != layer:
+            self.setLayer(layer)
+            lyr = self.layer()
+
         if isinstance(lyr, QgsRasterLayer):
             band = self.band()
             dp: QgsRasterDataProvider = lyr.dataProvider()
 
             if dp.dataType(band) in BITFLAG_DATA_TYPES.keys():
-                if crs != lyr.crs():
-                    trans = QgsCoordinateTransform()
-                    trans.setSourceCrs(crs)
-                    trans.setDestinationCrs(lyr.crs())
-                    point = trans.transform(point)
 
                 point = point
                 values: QgsRasterIdentifyResult = dp.identify(point, QgsRaster.IdentifyFormatValue)

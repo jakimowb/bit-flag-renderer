@@ -36,7 +36,6 @@ class BitFlagRendererPlugin(object):
         self.mMapToolHandler = None
 
     def initGui(self):
-
         from qgis.utils import iface
         iface: QgisInterface
 
@@ -57,7 +56,7 @@ class BitFlagRendererPlugin(object):
         self.actionShowBitFlags = self.mWidget.actionShowBitFlags
         self.mMapTool = BitFlagMapTool(iface.mapCanvas())
         self.mMapToolHandler = BitFlagMapToolHandler(self.mMapTool, self.actionShowBitFlags)
-        self.mMapTool.bitFlagRequest.connect(self.mWidget.loadBitFlags)
+        self.mMapToolHandler.bitFlagRequest.connect(self.mWidget.loadBitFlags)
         self.mToolBar = iface.addToolBar('Bit Flag Renderer')
         self.mToolBar.insertAction(None, self.actionShowDock)
         self.mToolBar.insertAction(None, self.actionShowBitFlags)

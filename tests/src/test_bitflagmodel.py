@@ -20,7 +20,7 @@ from bitflagrenderer.core.bitflagmodel import BitFlagModel
 from bitflagrenderer.core.bitflagscheme import BitFlagScheme, BitFlagParameter
 from qgis.PyQt.QtCore import Qt, QMimeData, QModelIndex
 from qps.testing import start_app
-from tests.bitflagtests import BitFlagTestCases
+from tests.src.bitflagtests import BitFlagTestCases
 
 start_app()
 

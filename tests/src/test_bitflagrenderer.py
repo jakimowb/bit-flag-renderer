@@ -165,6 +165,9 @@ class BitFlagRendererTests(TestCase):
 
         self.showGui(d)
 
+    def test_false(self):
+        self.assertTrue(False)
+
     def test_Plugin(self):
 
         pluginDir = DIR_REPO.as_posix()
