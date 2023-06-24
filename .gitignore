@@ -14,7 +14,8 @@ test-reports.txt
 test-results/
 *.gpkg-shm
 *.gpkg-wal
-
+symbology-style.db
+user-history.db
 *~$*.*
 
 # Untrack compiled files
