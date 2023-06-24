@@ -24,7 +24,6 @@ from bitflagrenderer import DIR_EXAMPLE_DATA, DIR_REPO, DIR_BITFLAG_SCHEMES
 from bitflagrenderer.core.bitflagmodel import BitFlagModel
 from bitflagrenderer.core.bitflagscheme import BitFlagScheme, BitFlagParameter, BitFlagState
 from bitflagrenderer.core.bitlfagrenderer import BitFlagRenderer
-from bitflagrenderer.gui.aboutdialog import AboutBitFlagRenderer
 from bitflagrenderer.gui.saveflagschemedialog import SaveFlagSchemeDialog
 from qgis.PyQt.QtCore import Qt
 from qgis.PyQt.QtWidgets import QTreeView
@@ -157,9 +156,6 @@ class BitFlagRendererTests(TestCase):
         s = ""
         self.showGui(canvas)
         QgsProject.instance().removeAllMapLayers()
-
-    def test_false(self):
-        self.assertTrue(False)
 
     def test_Plugin(self):
 

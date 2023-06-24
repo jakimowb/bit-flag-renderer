@@ -29,11 +29,11 @@ class PluginTestCases(BitFlagTestCases):
         super().__init__(*args, **kwds)
 
     def test_AboutDialog(self):
-
         d = AboutBitFlagRenderer()
         d.show()
 
         self.showGui(d)
+
     def test_Plugin(self):
         from qgis.utils import iface
         iface: QgisInterface

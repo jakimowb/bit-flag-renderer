@@ -1,10 +1,8 @@
-from PyQt5.QtWidgets import QTextBrowser
-
+from bitflagrenderer import PATH_ABOUT_UI, PATH_LICENSE, __version__, PATH_CHANGELOG, PATH_ABOUT
+from bitflagrenderer.core.utils import loadUi
 from qgis.PyQt.QtCore import Qt
 from qgis.PyQt.QtWidgets import QDialog
 
-from bitflagrenderer.core.utils import loadUi
-from bitflagrenderer import PATH_ABOUT_UI, PATH_LICENSE, __version__, PATH_CHANGELOG, PATH_ABOUT
 
 class AboutBitFlagRenderer(QDialog):
     def __init__(self, parent=None):
