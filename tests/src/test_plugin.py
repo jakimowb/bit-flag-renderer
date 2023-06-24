@@ -3,6 +3,7 @@ import unittest
 
 from bitflagrenderer import DIR_EXAMPLE_DATA, DIR_BITFLAG_SCHEMES
 from bitflagrenderer.core.bitflagscheme import BitFlagScheme
+from bitflagrenderer.gui.aboutdialog import AboutBitFlagRenderer
 from bitflagrenderer.gui.bitflagrendererdockwidget import BitFlagRendererDockWidget
 from bitflagrenderer.plugin import BitFlagRendererPlugin
 from bitflagrenderer.resources.bitflagrenderer_rc import qInitResources
@@ -27,6 +28,12 @@ class PluginTestCases(BitFlagTestCases):
     def __init__(self, *args, **kwds):
         super().__init__(*args, **kwds)
 
+    def test_AboutDialog(self):
+
+        d = AboutBitFlagRenderer()
+        d.show()
+
+        self.showGui(d)
     def test_Plugin(self):
         from qgis.utils import iface
         iface: QgisInterface

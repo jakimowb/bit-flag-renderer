@@ -120,7 +120,7 @@ def create_plugin():
     files = list(scantree(DIR_PKG, pattern=pattern))
     files.extend(list(scantree(DIR_PKG / 'flagschemes', pattern=pattern)))
     files.append(DIR_PKG / '__init__.py')
-    files.append(DIR_REPO / 'ABOUT.html')
+    files.append(DIR_REPO / 'ABOUT.md')
     files.append(DIR_REPO / 'CHANGELOG.md')
     files.append(DIR_REPO / 'LICENSE.md')
     files.append(DIR_REPO / 'LICENSE.html')

@@ -158,13 +158,6 @@ class BitFlagRendererTests(TestCase):
         self.showGui(canvas)
         QgsProject.instance().removeAllMapLayers()
 
-    def test_AboutDialog(self):
-
-        d = AboutBitFlagRenderer()
-        d.show()
-
-        self.showGui(d)
-
     def test_false(self):
         self.assertTrue(False)
 

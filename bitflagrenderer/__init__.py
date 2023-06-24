@@ -46,7 +46,7 @@ DIR_ICONS = DIR_RESOURCES / 'bitflagrenderer' / 'icons'
 
 PATH_CHANGELOG = DIR_REPO / 'CHANGELOG.md'
 PATH_LICENSE = DIR_REPO / 'LICENSE.md'
-PATH_ABOUT = DIR_REPO / 'ABOUT.html'
+PATH_ABOUT = DIR_REPO / 'ABOUT.md'
 
 PATH_RESOURCES = pathlib.Path(__file__).parents[0] / 'resources.py'
 
