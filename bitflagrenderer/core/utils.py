@@ -179,8 +179,8 @@ QGIS2NUMPY_DATA_TYPES = {Qgis.Byte: np.byte,
 
 BITFLAG_DATA_TYPES = {q: n for q, n in QGIS2NUMPY_DATA_TYPES.items() if q in [
     Qgis.Byte,
-    Qgis.DataType.Int8, Qgis.DataType.Int16, Qgis.DataType.Int32,
-    Qgis.DataType.UInt16, Qgis.DataType.UInt32,
+    Qgis.Int8, Qgis.Int16, Qgis.Int32,
+    Qgis.UInt16, Qgis.UInt32,
 ]}
 
 

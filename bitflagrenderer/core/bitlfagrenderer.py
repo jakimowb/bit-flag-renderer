@@ -6,8 +6,8 @@ import numpy as np
 
 from bitflagrenderer.core.bitflagscheme import BitFlagScheme, BitFlagParameter, BitFlagState
 from bitflagrenderer.core.utils import QGIS2NUMPY_DATA_TYPES, BITFLAG_DATA_TYPES
-from qgis.PyQt.QtGui import QColor
 from qgis.PyQt.QtXml import QDomDocument, QDomElement
+from qgis.core import QgsLayerTreeModelLegendNode, QgsLayerTreeLayer, QgsRasterSymbolLegendNode
 from qgis.core import QgsRasterInterface
 from qgis.core import QgsSingleBandGrayRenderer, QgsRasterTransparency, QgsRectangle, QgsRasterBlockFeedback, \
     QgsRasterBlock, Qgis, QgsRasterRenderer
@@ -77,23 +77,19 @@ class BitFlagRenderer(QgsSingleBandGrayRenderer):
 
         pass
 
-    def legendSymbologyItems(self, *args, **kwargs):
-        """ Overwritten from parent class. Items for the legend. """
-        transparency = QColor(0, 255, 0, 0)
-        items = [(self.bitFlagScheme().name(), transparency)]
-        for parameter in self.bitFlagScheme():
-            assert isinstance(parameter, BitFlagParameter)
-            visibleStates = [s for s in parameter if s.isVisible()]
-            if len(visibleStates) == 0:
-                continue
+    def createLegendNodes(self, nodeLayer: QgsLayerTreeLayer) -> List[QgsLayerTreeModelLegendNode]:
+        nodes = []
+        for p in self.bitFlagScheme():
+            p: BitFlagParameter
+            for s in p:
+                s: BitFlagState
+                if s.isVisible():
+                    node = QgsRasterSymbolLegendNode(nodeLayer, s.color(),
+                                                     f'{p.name()}:{s.name()}',
+                                                     isCheckable=True, parent=nodeLayer)
 
-            items.append(('[{}]'.format(parameter.name()), transparency))
-
-            for flagState in visibleStates:
-                assert isinstance(flagState, BitFlagState)
-                item = (flagState.name(), flagState.color())
-                items.append(item)
-        return items
+                    nodes.append(node)
+        return nodes
 
     def block(self, band_nr: int, extent: QgsRectangle, width: int, height: int,
               feedback: QgsRasterBlockFeedback = None):
