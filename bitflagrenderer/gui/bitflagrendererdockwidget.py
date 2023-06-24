@@ -231,12 +231,7 @@ class BitFlagRendererDockWidget(QgsDockWidget):
         excluded = []
         for lyr in self.mProject.mapLayers().values():
             if isinstance(lyr, QgsRasterLayer):
-                if lyr.dataProvider().dataType(1) not in [Qgis.DataType.Byte,
-                                                          Qgis.DataType.Int8,
-                                                          Qgis.DataType.Int16,
-                                                          Qgis.DataType.Int32,
-                                                          Qgis.DataType.UInt16,
-                                                          Qgis.DataType.UInt32]:
+                if lyr.dataProvider().dataType(1) not in BITFLAG_DATA_TYPES:
                     excluded.append(lyr)
 
         cb.setExceptedLayerList(excluded)
