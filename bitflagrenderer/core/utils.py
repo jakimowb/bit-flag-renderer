@@ -165,7 +165,7 @@ def loadUi(uifile, baseinstance=None, package='', resource_suffix='_rc', remove_
         return uic.loadUiType(buffer, resource_suffix=resource_suffix)
 
 
-QGIS2NUMPY_DATA_TYPES = {Qgis.Byte: np.byte,
+QGIS2NUMPY_DATA_TYPES = {Qgis.Byte: np.uint8,
                          Qgis.UInt16: np.uint16,
                          Qgis.Int16: np.int16,
                          Qgis.UInt32: np.uint32,
@@ -179,9 +179,13 @@ QGIS2NUMPY_DATA_TYPES = {Qgis.Byte: np.byte,
 
 BITFLAG_DATA_TYPES = {q: n for q, n in QGIS2NUMPY_DATA_TYPES.items() if q in [
     Qgis.Byte,
-    Qgis.Int8, Qgis.Int16, Qgis.Int32,
+    Qgis.Int16, Qgis.Int32,
     Qgis.UInt16, Qgis.UInt32,
 ]}
+
+if Qgis.versionInt() >= 33000:
+    QGIS2NUMPY_DATA_TYPES[Qgis.Int8] = np.int8
+    BITFLAG_DATA_TYPES[Qgis.Int8] = np.int8
 
 
 def bit_string(value: int) -> str:
