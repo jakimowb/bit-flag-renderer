@@ -2,12 +2,13 @@
 
 ## Version 0.5
 
-- fixed conversion from QGIS to numpy data types
-- replaces layer properties panel with dock widget to control layer renderer
-- refactoring
-- moved repository to https://github.com/jakimowb/bit-flag-renderer
+- Bit Flag Render GUI is now a dock widget
 - saves/loads bit flag schemes from *.json files
-- added map tool to extract the Bit Flags at cursor position
+- added map tool to extract the Bit Flag string at cursor position
+- extensive code refactoring
+- fixed data type conversion from QGIS to numpy data types
+- added CI tests
+- moved repository to https://github.com/jakimowb/bit-flag-renderer
 
 ## Version 0.4
 
