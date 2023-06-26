@@ -1,15 +1,14 @@
-import collections
 import copy
 import json
-import os
+import pathlib
 from typing import List, Iterator, Union
 
 from qgis.PyQt.QtCore import QMimeData
 from qgis.PyQt.QtGui import QColor
 from qgis.PyQt.QtXml import QDomDocument, QDomElement
-
-from .. import DIR_BITFLAG_SCHEMES
 from .utils import nextColor
+
+FILTER_SCHEME_FILES = 'XML files (*.xml);;JSON files (*.json);;All files (*.*)"'
 
 
 class BitFlagState(object):
@@ -381,49 +380,30 @@ class BitFlagScheme(object):
     MIMEDATA = 'applications/bitflagrenderer/bitflagscheme'
 
     @staticmethod
-    def loadAllSchemes() -> collections.OrderedDict:
-        """
-        Loads BitFlagSchemes.
-        :return:
-        :rtype:
-        """
-        SCHEMES = collections.OrderedDict()
-
-        import bitflagrenderer.core.bitflagschemes as bfs
-        schemes = [bfs.Landsat8_QA(),
-                   bfs.LandsatTM_QA(),
-                   bfs.LandsatMSS_QA(),
-                   #  bfs.FORCE_QAI()
-                   ]
-        for s in schemes:
-            SCHEMES[s.name()] = s
-
-        if os.path.isdir(DIR_BITFLAG_SCHEMES):
-            schemes = []
-            for entry in os.scandir(DIR_BITFLAG_SCHEMES):
-                if entry.is_file and entry.path.endswith('.xml'):
-                    fileSchemes = BitFlagScheme.fromFile(entry.path)
-                    schemes.extend(fileSchemes)
-            schemes = sorted(schemes, key=lambda s: s.name())
-            for s in schemes:
-                SCHEMES[s.name()] = s
-
-        return SCHEMES
-
-    @staticmethod
     def fromFile(path: str) -> List:
+        path = pathlib.Path(path)
         schemes = []
-        if os.path.isfile(path):
+        if path.is_file():
+            name = path.name.lower()
             with open(path, 'r', encoding='utf-8') as f:
-                xml = f.read()
-                dom = QDomDocument()
-                dom.setContent(xml)
 
-                schemeNodes = dom.elementsByTagName(BitFlagScheme.__name__)
-                for i in range(schemeNodes.count()):
-                    scheme = BitFlagScheme.fromXml(schemeNodes.at(i).toElement())
+                text = f.read()
+                if name.endswith('.xml'):
+
+                    dom = QDomDocument()
+                    dom.setContent(text)
+
+                    schemeNodes = dom.elementsByTagName(BitFlagScheme.__name__)
+                    for i in range(schemeNodes.count()):
+                        scheme = BitFlagScheme.fromXml(schemeNodes.at(i).toElement())
+                        if isinstance(scheme, BitFlagScheme):
+                            schemes.append(scheme)
+                elif name.endswith('.json'):
+                    scheme = BitFlagScheme.fromJson(text)
                     if isinstance(scheme, BitFlagScheme):
                         schemes.append(scheme)
+                else:
+                    raise Exception(f'Not supported filetype: {path}')
 
         return schemes
 
@@ -596,16 +576,26 @@ class BitFlagScheme(object):
             s = ""
         return scheme
 
-    def writeXmlFile(self, path):
+    def writeFile(self, path: Union[str, pathlib.Path]):
 
-        doc = QDomDocument()
+        path = pathlib.Path(path)
+        name = path.name.lower()
+        if name.endswith('.xml'):
 
-        root = doc.createElement(self.__class__.__name__ + 's')
-        self.writeXml(doc, root)
-        doc.appendChild(root)
+            doc = QDomDocument()
 
-        with open(path, 'w', encoding='utf-8') as f:
-            f.write(doc.toString())
+            root = doc.createElement(self.__class__.__name__ + 's')
+            self.writeXml(doc, root)
+            doc.appendChild(root)
+
+            with open(path, 'w', encoding='utf-8') as f:
+                f.write(doc.toString())
+        elif name.endswith('.json'):
+
+            with open(path, 'w') as f:
+                f.write(self.json())
+        else:
+            raise NotImplementedError(f'Unsupported file type: {path}')
 
     def writeXml(self, doc: QDomDocument, parentElement: QDomElement):
 

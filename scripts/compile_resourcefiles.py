@@ -1,10 +1,11 @@
 import pathlib
 
 from bitflagrenderer import DIR_RESOURCES
-
+from qgis.testing import start_app
+start_app()
+from tests.qgispluginsupport.qps.resources import compileResourceFiles
 
 def compileResources():
-    from qps.resources import compileResourceFiles
 
     directories = [DIR_RESOURCES]
     for d in directories:

@@ -19,16 +19,12 @@ import pathlib
 
 __version__ = '0.5'
 
-from qgis.PyQt.QtCore import QSettings
-
-from qgis.gui import QgisInterface
-
 TITLE = 'Bit Flag Renderer'
 AUTHOR = 'Benjamin Jakimow'
 MAIL = 'benjamin.jakimow@geo.hu-berlin.de'
 
 LICENSE = 'GNU GPL-3'
-DESCRIPTION = 'Visualization of quality image bit flags.'
+DESCRIPTION = 'Visualization of raster pixel bit values.'
 URL_HOMEPAGE = 'https://bit-flag-renderer.readthedocs.io/en/latest/'
 URL_DOCUMENTATION = 'https://bit-flag-renderer.readthedocs.io/en/latest/'
 URL_REPOSITORY = 'https://github.com/jakimowb/bit-flag-renderer'
@@ -41,8 +37,8 @@ LOG_MESSAGE_TAG = TITLE
 DIR_PKG = pathlib.Path(__file__).parent
 DIR_REPO = DIR_PKG.parent
 DIR_RESOURCES = DIR_PKG / 'resources'
-DIR_EXAMPLE_DATA = DIR_RESOURCES / 'exampledata'
 DIR_BITFLAG_SCHEMES = DIR_RESOURCES / 'bitflagschemes'
+DIR_EXAMPLE_DATA = DIR_RESOURCES / 'exampledata'
 DIR_ICONS = DIR_RESOURCES / 'bitflagrenderer' / 'icons'
 
 PATH_CHANGELOG = DIR_REPO / 'CHANGELOG.md'
@@ -56,28 +52,6 @@ PATH_RESOURCES = pathlib.Path(__file__).parents[0] / 'resources.py'
 #    import bitflagrenderer.resources
 #    bitflagrenderer.resources.qInitResources()
 
-def classFactory(iface: QgisInterface):  # pylint: disable=invalid-name
-    """Loads the Bit Flag Renderer Plugin.
-
-    :param iface: A QGIS interface instance.
-    :type iface: QgsInterface
-    """
-    pluginDir = os.path.dirname(__file__)
-    # if not pluginDir in sys.path:
-    #    sys.path.append(pluginDir)
-    from .plugin import BitFlagRendererPlugin
-    return BitFlagRendererPlugin(iface)
-
-
-def settings() -> QSettings:
-    """
-    Returns the Bit Flag Renderer settings.
-    :return: QSettings
-    """
-    settings = QSettings(QSettings.UserScope, 'HU-Berlin', TYPE)
-
-    return settings
-
 
 class SettingsKeys(enum.Enum):
     TreeViewState = 'tree_view_state'
@@ -90,7 +64,7 @@ MAX_BITS_PER_PARAMETER = 4
 PATH_UI = os.path.join(os.path.dirname(__file__), 'resources/bitflagrenderer.ui')
 PATH_ABOUT_UI = os.path.join(os.path.dirname(__file__), 'gui/aboutdialog.ui')
 PATH_ICON = os.path.join(os.path.dirname(__file__), *['icons', 'bitflagimage.png'])
-PATH_UI_SAVE_FLAG_SCHEMA = os.path.join(os.path.dirname(__file__), 'gui/saveflagschemadialog.ui')
+PATH_UI_SAVE_FLAG_SCHEME = os.path.join(os.path.dirname(__file__), 'gui/saveflagschemedialog.ui')
 TYPE = 'BitFlagRenderer'
 QGIS_RESOURCE_WARNINGS = set()
 

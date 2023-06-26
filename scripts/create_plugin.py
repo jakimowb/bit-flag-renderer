@@ -18,24 +18,28 @@
 *                                                                         *
 ***************************************************************************
 """
-# noinspection PyPep8Naming
-
 import argparse
 import datetime
+import io
 import os
+import git
 import pathlib
 import re
 import shutil
+import textwrap
 from typing import Iterator, Union
-from xml.dom import minidom
 
 import docutils.core
 import markdown
+from qgis.testing import start_app
+app = start_app()
 
 import bitflagrenderer
-from bitflagrenderer import DIR_REPO, __version__, PATH_ABOUT, DIR_RESOURCES, DIR_PKG
-from qps.make.deploy import QGISMetadataFileWriter
-from qps.utils import zipdir
+from bitflagrenderer import DIR_REPO, __version__, PATH_ABOUT, DIR_RESOURCES, DIR_PKG, TITLE
+from qgis.core import QgsUserProfileManager, QgsUserProfile
+
+from tests.qgispluginsupport.qps.make.deploy import QGISMetadataFileWriter, userProfileManager
+from tests.qgispluginsupport.qps.utils import zipdir
 
 CHECK_COMMITS = False
 
@@ -48,14 +52,13 @@ with open(PATH_ABOUT, 'r', encoding='utf-8') as f:
     aboutText = ''.join(aboutText)
 
 MD = QGISMetadataFileWriter()
-MD.mName = 'Bit Flag Renderer'
+MD.mName = bitflagrenderer.TITLE
 MD.mDescription = bitflagrenderer.DESCRIPTION
 MD.mTags = ['Raster']
 MD.mCategory = 'Analysis'
 MD.mAuthor = 'Benjamin Jakimow, Earth Observation Lab, Humboldt-Universität zu Berlin'
-MD.mIcon = 'bitflagrenderer/icons/bitflagimage.png'
+MD.mIcon = 'bitflagrenderer/resources/icons/bitflagimage.svg'
 MD.mHomepage = bitflagrenderer.URL_HOMEPAGE
-MD.mAbout = aboutText
 MD.mTracker = bitflagrenderer.URL_ISSUE_TRACKER
 MD.mRepository = bitflagrenderer.URL_REPOSITORY
 MD.mQgisMinimumVersion = '3.28'
@@ -80,19 +83,14 @@ def scantree(path, pattern=re.compile('.$')) -> Iterator[pathlib.Path]:
             yield pathlib.Path(entry.path)
 
 
-def create_plugin():
+def create_plugin(copy_to_profile: Union[bool, str] = False):
     DIR_REPO = pathlib.Path(__file__).resolve().parents[1]
     assert (DIR_REPO / '.git').is_dir()
 
     DIR_DEPLOY = DIR_REPO / 'deploy'
 
-    try:
-        import git
-        REPO = git.Repo(DIR_REPO)
-        currentBranch = REPO.active_branch.name
-    except Exception as ex:
-        currentBranch = 'TEST'
-        print('Unable to find git repo. Set currentBranch to "{}"'.format(currentBranch))
+    REPO = git.Repo(DIR_REPO)
+    currentBranch = REPO.active_branch.name
 
     timestamp = datetime.datetime.now().isoformat().split('.')[0]
 
@@ -108,6 +106,7 @@ def create_plugin():
 
     PATH_METADATAFILE = PLUGIN_DIR / 'metadata.txt'
     MD.mVersion = BUILD_NAME
+    MD.mAbout = markdownToHTML(PATH_ABOUT)
     MD.writeMetadataTxt(DIR_PKG / 'metadata.txt')
     MD.writeMetadataTxt(PATH_METADATAFILE)
 
@@ -132,21 +131,47 @@ def create_plugin():
     files.append(DIR_REPO / 'requirements.txt')
 
     for fileSrc in files:
-        assert fileSrc.is_file()
+        assert fileSrc.is_file(), fileSrc
         fileDst = PLUGIN_DIR / fileSrc.relative_to(DIR_REPO)
         os.makedirs(fileDst.parent, exist_ok=True)
         shutil.copy(fileSrc, fileDst.parent)
 
+    # Copy to other deploy directory
+    if copy_to_profile:
+        profileManager: QgsUserProfileManager = userProfileManager()
+        assert len(profileManager.allProfiles()) > 0
+        if isinstance(copy_to_profile, str):
+            profileName = copy_to_profile
+        else:
+            profileName = profileManager.defaultProfileName()
+        assert profileManager.profileExists(profileName), \
+            f'QGIS profiles "{profileName}" does not exist in {profileManager.allProfiles()}'
+
+        profileManager.setActiveUserProfile(profileName)
+        profile: QgsUserProfile = profileManager.userProfile()
+
+        DIR_QGIS_USERPROFILE = pathlib.Path(profile.folder())
+        if DIR_QGIS_USERPROFILE:
+            os.makedirs(DIR_QGIS_USERPROFILE, exist_ok=True)
+            if not DIR_QGIS_USERPROFILE.is_dir():
+                raise f'QGIS profile directory "{profile.name()}" does not exists: {DIR_QGIS_USERPROFILE}'
+
+        QGIS_PROFILE_DEPLOY = DIR_QGIS_USERPROFILE / 'python' / 'plugins' / PLUGIN_DIR.name
+        # just in case the <profile>/python/plugins folder has not been created before
+        os.makedirs(DIR_QGIS_USERPROFILE.parent, exist_ok=True)
+        if QGIS_PROFILE_DEPLOY.is_dir():
+            shutil.rmtree(QGIS_PROFILE_DEPLOY)
+        print(f'Copy profile from {PLUGIN_DIR} to {QGIS_PROFILE_DEPLOY}...')
+        shutil.copytree(PLUGIN_DIR, QGIS_PROFILE_DEPLOY)
+
     # update metadata version
 
-    f = open(DIR_REPO / 'bitflagrenderer' / '__init__.py')
-    lines = f.read()
-    f.close()
+    with open(DIR_REPO / 'bitflagrenderer' / '__init__.py') as f:
+        lines = f.read()
+
     lines = re.sub(r'(__version__\W*=\W*)([^\n]+)', r'__version__ = "{}"\n'.format(BUILD_NAME), lines)
-    f = open(PLUGIN_DIR / 'bitflagrenderer' / '__init__.py', 'w')
-    f.write(lines)
-    f.flush()
-    f.close()
+    with open(PLUGIN_DIR / 'bitflagrenderer' / '__init__.py', 'w') as f:
+        f.write(lines)
 
     createCHANGELOG(PLUGIN_DIR)
 
@@ -169,7 +194,6 @@ def create_plugin():
         print('\n'.join(info))
 
     print('Finished')
-
 
 
 def markdownToHTML(path_md: Union[str, pathlib.Path]) -> str:
@@ -226,7 +250,18 @@ def createCHANGELOG(dirPlugin):
 
 
 if __name__ == "__main__":
+
     parser = argparse.ArgumentParser(description='Create the BitFlagRenderer Plugin')
+    parser.add_argument('-p', '--profile',
+                        nargs='?',
+                        const=True,
+                        default=False,
+                        help=textwrap.dedent("""
+                            Install the EnMAP-Box plugin into a QGIS user profile.
+                            Requires that QGIS is closed. Use:
+                            -p or --profile for installation into the active user profile
+                            --profile=myProfile for installation install it into profile "myProfile"
+                            """)
+                        )
     args = parser.parse_args()
-    create_plugin()
-    exit()
+    create_plugin(copy_to_profile=args.profile)

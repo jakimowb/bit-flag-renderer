@@ -2,6 +2,6 @@
   <qresource prefix="bitflagrenderer">
     <file>icons/bitflagmaptool.svg</file>
     <file>icons/logo_hub.svg</file>
-    <file>icons/bitflagimage.png</file>
+    <file>icons/bitflagimage.svg</file>
   </qresource>
 </RCC>

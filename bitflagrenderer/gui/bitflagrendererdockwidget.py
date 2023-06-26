@@ -1,18 +1,23 @@
+import os.path
+import pathlib
 from pathlib import Path
 from typing import Dict, Tuple
 
 from osgeo import gdal
 
+import bitflagrenderer.core.settings as settings
+from bitflagrenderer import DIR_PKG
 from bitflagrenderer.core.bitflagmodel import BitFlagModel, BitFlagSortFilterProxyModel
-from bitflagrenderer.core.bitflagscheme import BitFlagParameter, BitFlagScheme
+from bitflagrenderer.core.bitflagscheme import BitFlagParameter, BitFlagScheme, FILTER_SCHEME_FILES
 from bitflagrenderer.core.bitlfagrenderer import BitFlagRenderer
 from bitflagrenderer.core.utils import bit_string, BITFLAG_DATA_TYPES
 from bitflagrenderer.gui.bitflagrenderertreeview import BitFlagRendererTreeView
+from bitflagrenderer.gui.saveflagschemedialog import SaveFlagSchemeDialog
 from qgis.PyQt import uic
 from qgis.PyQt.QtCore import Qt, QMimeData, pyqtSignal
 from qgis.PyQt.QtGui import QClipboard
-from qgis.PyQt.QtWidgets import QHeaderView, QTreeView, QApplication, QLineEdit
-from qgis.core import Qgis, QgsMapLayerProxyModel, QgsProject, QgsMapLayer, QgsRasterLayer
+from qgis.PyQt.QtWidgets import QHeaderView, QTreeView, QApplication, QLineEdit, QFileDialog
+from qgis.core import QgsMapLayerProxyModel, QgsProject, QgsMapLayer, QgsRasterLayer
 from qgis.core import QgsPointXY, QgsRasterDataProvider, QgsRaster, \
     QgsRasterIdentifyResult, QgsRasterRenderer
 from qgis.gui import QgsDockWidget, QgsMapLayerComboBox, QgsRasterBandComboBox, QgsColorButton
@@ -60,6 +65,9 @@ class BitFlagRendererDockWidget(QgsDockWidget):
         self.actionAddParameter.triggered.connect(self.addParameter)
         self.actionCopyBitFlagScheme.triggered.connect(self.copyBitFlagScheme)
         self.actionPasteBitFlagScheme.triggered.connect(self.pasteBitFlagScheme)
+        self.actionLoadBitFlagScheme.triggered.connect(self.loadBitFlagScheme)
+        self.actionSaveBitFlagScheme.triggered.connect(self.saveBitFlagScheme)
+
         self.mFlagModel.setCombineFlags(False)
         self.actionCombineBitFlags.setChecked(False)
         self.actionCombineBitFlags.toggled.connect(self.mFlagModel.setCombineFlags)
@@ -69,6 +77,8 @@ class BitFlagRendererDockWidget(QgsDockWidget):
         self.btnAddParameter.setDefaultAction(self.actionAddParameter)
         self.btnCopyBitFlagScheme.setDefaultAction(self.actionCopyBitFlagScheme)
         self.btnPasteBitFlagScheme.setDefaultAction(self.actionPasteBitFlagScheme)
+        self.btnLoadBitFlagScheme.setDefaultAction(self.actionLoadBitFlagScheme)
+        self.btnSaveBitFlagScheme.setDefaultAction(self.actionSaveBitFlagScheme)
         self.btnShowBitFlags.setDefaultAction(self.actionShowBitFlags)
         self.btnCombineBitFlags.setDefaultAction(self.actionCombineBitFlags)
         self.btnNoDataColor: QgsColorButton
@@ -150,6 +160,37 @@ class BitFlagRendererDockWidget(QgsDockWidget):
                 self.cbBand.setLayer(layer)
 
             self.restoreModel()
+
+    def loadBitFlagScheme(self):
+
+        filedir = settings.settingsBitFlagSchemeDirectory.valueAsVariant()
+
+        filedir = pathlib.Path(filedir)
+        if not filedir.is_absolute():
+            filedir = DIR_PKG / filedir
+
+        if not filedir.is_dir():
+            filedir = None
+        else:
+            filedir = filedir.as_posix()
+
+        path, filter = QFileDialog.getOpenFileName(self, "Load Bit Flag Scheme",
+                                                   directory=filedir, filter=FILTER_SCHEME_FILES)
+
+        if os.path.isfile(path):
+            try:
+                schemes = BitFlagScheme.fromFile(path)
+                if len(schemes) > 0:
+                    self.setBitFlagScheme(schemes[0])
+                settings.settingsBitFlagSchemeDirectory.setValue(pathlib.Path(path).parent.as_posix())
+            except Exception:
+                pass
+
+    def saveBitFlagScheme(self):
+        path = SaveFlagSchemeDialog.save(self.bitFlagScheme())
+        if isinstance(path, pathlib.Path):
+            rootDir = path.parent
+            settings.settingsBitFlagSchemeDirectory.setValue(rootDir.as_posix())
 
     def layer(self) -> QgsRasterLayer:
         return self.cbBand.layer()

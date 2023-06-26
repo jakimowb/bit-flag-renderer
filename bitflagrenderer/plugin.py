@@ -47,22 +47,12 @@ class BitFlagRendererPlugin(object):
         qInitResources()
 
         self.mMenuName = TITLE
-        self.actionShowDock = QAction('Bit Flag Dock')
-        self.actionShowDock.setIcon(QIcon(':/bitflagrenderer/icons/bitflagimage.png'))
-        self.actionShowDock.setCheckable(True)
-
         self.mWidget = BitFlagRendererDockWidget()
-        self.mWidget.setToggleVisibilityAction(self.actionShowDock)
-        self.actionShowBitFlags = self.mWidget.actionShowBitFlags
-        self.mMapTool = BitFlagMapTool(iface.mapCanvas())
-        self.mMapToolHandler = BitFlagMapToolHandler(self.mMapTool, self.actionShowBitFlags)
-        self.mMapToolHandler.bitFlagRequest.connect(self.mWidget.loadBitFlags)
-        self.mToolBar = iface.addToolBar('Bit Flag Renderer')
-        self.mToolBar.insertAction(None, self.actionShowDock)
-        self.mToolBar.insertAction(None, self.actionShowBitFlags)
 
-        iface.addDockWidget(Qt.RightDockWidgetArea, self.mWidget)
-        iface.registerMapToolHandler(self.mMapToolHandler)
+        self.actionShowDock = QAction('Bit Flag Dock')
+        self.actionShowDock.setIcon(QIcon(':/bitflagrenderer/icons/bitflagimage.svg'))
+        self.actionShowDock.setCheckable(True)
+        self.mWidget.setToggleVisibilityAction(self.actionShowDock)
 
         self.mAboutAction = QAction(QIcon(':/images/themes/default/mActionPropertiesWidget.svg'), 'About')
         self.mAboutAction.triggered.connect(self.onAboutAction)
@@ -70,16 +60,34 @@ class BitFlagRendererPlugin(object):
         self.mLoadExample = QAction('Load Example Data')
         self.mLoadExample.triggered.connect(self.onLoadExampleData)
 
-        iface.addPluginToRasterMenu(self.mMenuName, self.mAboutAction)
-        iface.addPluginToRasterMenu(self.mMenuName, self.mLoadExample)
-        iface.addToolBar(self.mToolBar)
+        self.actionShowBitFlags = self.mWidget.actionShowBitFlags
+
+        self.mMapTool = BitFlagMapTool(iface.mapCanvas())
+        self.mMapToolHandler = BitFlagMapToolHandler(self.mMapTool, self.actionShowBitFlags)
+        self.mMapToolHandler.bitFlagRequest.connect(self.mWidget.loadBitFlags)
+
+        self.mToolBarActions = [self.actionShowDock, self.actionShowBitFlags]
+        self.mPluginMenuActions = self.mToolBarActions + [self.mLoadExample, self.mAboutAction]
+
+        for a in self.mToolBarActions:
+            iface.addToolBarIcon(a)
+
+        iface.addDockWidget(Qt.RightDockWidgetArea, self.mWidget)
+        iface.registerMapToolHandler(self.mMapToolHandler)
+
+        for a in self.mPluginMenuActions:
+            iface.addPluginToRasterMenu(self.mMenuName, a)
 
     def unload(self):
         from qgis.utils import iface
         iface: QgisInterface
-        self.mToolBar.parent().removeToolBar(self.mToolBar)
-        iface.removePluginRasterMenu(self.mMenuName, self.mLoadExample)
-        iface.removePluginRasterMenu(self.mMenuName, self.mAboutAction)
+        # self.mToolBar.parent().removeToolBar(self.mToolBar)
+        for a in self.mToolBarActions:
+            iface.removeToolBarIcon(a)
+
+        for a in self.mPluginMenuActions:
+            iface.removePluginRasterMenu(self.mMenuName, a)
+
         iface.unregisterMapToolHandler(self.mMapToolHandler)
         iface.removeDockWidget(self.mWidget)
 

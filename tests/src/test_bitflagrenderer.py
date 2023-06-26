@@ -20,7 +20,7 @@ import sys
 import unittest
 from typing import List
 
-from bitflagrenderer import DIR_EXAMPLE_DATA, DIR_REPO, DIR_BITFLAG_SCHEMES
+from bitflagrenderer import DIR_EXAMPLE_DATA, DIR_REPO, DIR_RESOURCES
 from bitflagrenderer.core.bitflagmodel import BitFlagModel
 from bitflagrenderer.core.bitflagscheme import BitFlagScheme, BitFlagParameter, BitFlagState
 from bitflagrenderer.core.bitlfagrenderer import BitFlagRenderer
@@ -42,8 +42,8 @@ start_app()
 
 pathFlagImage = filepath(DIR_EXAMPLE_DATA, r'.*BQA.*\.tif$')
 pathTOAImage = filepath(DIR_EXAMPLE_DATA, r'.*TOA.*\.tif$')
-pathFlagSchemeLND = filepath(DIR_BITFLAG_SCHEMES, r'landsat_level2_pixel_qa.xml')
-pathFlagSchemeQAI = filepath(DIR_BITFLAG_SCHEMES, r'force_qai.xml')
+pathFlagSchemeLND = filepath(DIR_RESOURCES / 'bitflagschemes', r'landsat_level2_pixel_qa.xml')
+pathFlagSchemeQAI = filepath(DIR_RESOURCES / 'bitflagschemes', r'force_qai.xml')
 DIR_TMP = DIR_REPO / 'tmp'
 os.makedirs(DIR_TMP, exist_ok=True)
 

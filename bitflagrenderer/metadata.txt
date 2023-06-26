@@ -2,12 +2,12 @@
 name=Bit Flag Renderer
 author=Benjamin Jakimow, Earth Observation Lab, Humboldt-Universität zu Berlin
 email=benjamin.jakimow@geo.hu-berlin.de
-description=Visualization of quality image bit flags.
-version=0.5.20230625T095551.master
+description=Visualization of raster pixel bit values.
+version=0.5.20230626T164719.master
 qgisMinimumVersion=3.28
 qgisMaximumVersion=3.99
-about=Visualization of bit flags in raster quality images.        # Features        * visualizes bit flags consisting of 1 to 3 bits (from 2 (on/off) to 8 different states)    * layer legend shows flag state colors     * predefined flag schemes, e.g. for [Landsat Quality Assessment (QA) bands](https://www.usgs.gov/landsat-missions/landsat-surface-reflectance-quality-assessment)    * allows to specify, save and reload flag schemes    * Documentation [https://bit-flag-renderer.readthedocs.io/en/latest](https://bit-flag-renderer.readthedocs.io/en/latest)    * Repository [https://bitbucket.org/jakimowb/bit-flag-renderer](https://bitbucket.org/jakimowb/bit-flag-renderer)            The Bit Flag Renderer is developed at Humboldt-Universität zu Berlin, [Earth Observation Lab](https://hu-berlin.de/eo-lab)    as part of the [Land Use Monitoring System (LUMOS)](https://eo.belspo.be/en/stereo-in-action/projects/remote-sensing-image-processing-algorithms-land-use-and-land-cover)    project. LUMOS was funded by the Belgian Science Policy Office as part of the Stereo-III research program (grant no. SR/01/349).
-icon=bitflagrenderer/icons/bitflagimage.png
+about=<p>The Bit Flag Render plugin allows to visualize the state of single bits in raster bands of with data type byte or integer.</p><h1>Features</h1><ul><li>visualizes bit flags consisting of 1 to 3 bits (from 2 (on/off) to 8 different states)</li><li>layer legend shows flag state colors </li><li>predefined flag schemes, e.g. for <a href="https://www.usgs.gov/landsat-missions/landsat-surface-reflectance-quality-assessment">Landsat Quality Assessment (QA) bands</a></li><li>allows to specify, save and reload flag schemes</li><li>Documentation <a href="https://bit-flag-renderer.readthedocs.io/en/latest">https://bit-flag-renderer.readthedocs.io/en/latest</a></li><li>Repository <a href="https://bitbucket.org/jakimowb/bit-flag-renderer">https://bitbucket.org/jakimowb/bit-flag-renderer</a></li></ul><p>The Bit Flag Renderer is developed at Humboldt-Universität zu Berlin, <a href="https://hu-berlin.de/eo-lab">Earth Observation Lab</a> as part of the <a href="https://eo.belspo.be/en/stereo-in-action/projects/remote-sensing-image-processing-algorithms-land-use-and-land-cover">Land Use Monitoring System (LUMOS)</a> project. LUMOS was funded by the Belgian Science Policy Office as part of the Stereo-III research program (grant no. SR/01/349).</p>
+icon=bitflagrenderer/resources/icons/bitflagimage.svg
 tags=Raster
 category=https://github.com/jakimowb/bit-flag-renderer
 hasProcessingProvider=no

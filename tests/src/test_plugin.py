@@ -79,6 +79,7 @@ class PluginTestCases(BitFlagTestCases):
         self.showGui(iface.mainWindow())
 
         project.removeAllMapLayers()
+        P.unload()
 
 
 if __name__ == '__main__':

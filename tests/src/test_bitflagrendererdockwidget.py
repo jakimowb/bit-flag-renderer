@@ -8,7 +8,7 @@ from qgis.gui import QgsMapCanvas, QgsLayerTreeView
 from qgis.core import QgsLayerTreeModel, QgsLayerTree, QgsLayerTreeLayer, QgsLayerTreeGroup
 from qgis.core import QgsRasterLayer, QgsProject
 
-from bitflagrenderer import DIR_EXAMPLE_DATA, DIR_BITFLAG_SCHEMES
+from bitflagrenderer import DIR_EXAMPLE_DATA, DIR_RESOURCES
 from bitflagrenderer.core.bitflagscheme import BitFlagScheme
 from bitflagrenderer.core.bitlfagrenderer import BitFlagRenderer
 from bitflagrenderer.gui.bitflagrendererdockwidget import BitFlagRendererDockWidget
@@ -107,7 +107,7 @@ class DockWidgetTestCases(BitFlagTestCases):
         w.apply()
         self.assertTrue(isinstance(lyr1.renderer(), BitFlagRenderer))
 
-        pathFlagSchemeLND = filepath(DIR_BITFLAG_SCHEMES, r'landsat_level2_pixel_qa.xml')
+        pathFlagSchemeLND = filepath(DIR_RESOURCES / 'bitflagschemes', r'landsat_level2_pixel_qa.xml')
         scheme = BitFlagScheme.fromFile(pathFlagSchemeLND)[0]
         w.setBitFlagScheme(scheme)
         w.setAutoApply(True)

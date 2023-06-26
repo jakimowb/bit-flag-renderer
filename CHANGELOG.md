@@ -7,6 +7,7 @@
 - added map tool to extract the Bit Flag string at cursor position
 - extensive code refactoring
 - fixed data type conversion from QGIS to numpy data types
+- support opacity / transparent colors (ARGB) 
 - added CI tests
 - moved repository to https://github.com/jakimowb/bit-flag-renderer
 

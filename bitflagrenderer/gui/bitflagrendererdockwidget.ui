@@ -11,7 +11,7 @@
    </rect>
   </property>
   <property name="windowIcon">
-   <iconset resource="../resources/bitflagrenderer.qrc">
+   <iconset>
     <normaloff>:/bitflagrenderer/icons/bitflagimage.png</normaloff>:/bitflagrenderer/icons/bitflagimage.png</iconset>
   </property>
   <property name="windowTitle">

@@ -13,6 +13,10 @@
   <property name="windowTitle">
    <string>Save Flags Scheme</string>
   </property>
+  <property name="windowIcon">
+   <iconset resource="../resources/bitflagrenderer.qrc">
+    <normaloff>:/bitflagrenderer/icons/bitflagimage.svg</normaloff>:/bitflagrenderer/icons/bitflagimage.svg</iconset>
+  </property>
   <layout class="QFormLayout" name="formLayout">
    <item row="0" column="0">
     <widget class="QLabel" name="label">
@@ -57,7 +61,9 @@
    <header>qgsfilewidget.h</header>
   </customwidget>
  </customwidgets>
- <resources/>
+ <resources>
+  <include location="../resources/bitflagrenderer.qrc"/>
+ </resources>
  <connections>
   <connection>
    <sender>buttonBox</sender>
