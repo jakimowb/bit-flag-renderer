@@ -29,7 +29,7 @@
    <string>About Bit Flag Renderer</string>
   </property>
   <property name="windowIcon">
-   <iconset resource="bitflagrenderer.qrc">
+   <iconset resource="../resources/bitflagrenderer.qrc">
     <normaloff>:/bitflagrenderer/icons/bitflagimage.png</normaloff>:/bitflagrenderer/icons/bitflagimage.png</iconset>
   </property>
   <property name="sizeGripEnabled">
@@ -249,7 +249,7 @@
                 <string/>
                </property>
                <property name="pixmap">
-                <pixmap resource="bitflagrenderer.qrc">:/bitflagrenderer/icons/bitflagimage.png</pixmap>
+                <pixmap resource="../resources/bitflagrenderer.qrc">:/bitflagrenderer/icons/bitflagimage.png</pixmap>
                </property>
                <property name="scaledContents">
                 <bool>true</bool>
@@ -399,7 +399,7 @@
                 <string/>
                </property>
                <property name="pixmap">
-                <pixmap resource="bitflagrenderer.qrc">:/bitflagrenderer/icons/logo_hub.svg</pixmap>
+                <pixmap resource="../resources/bitflagrenderer.qrc">:/bitflagrenderer/icons/logo_hub.svg</pixmap>
                </property>
                <property name="scaledContents">
                 <bool>true</bool>
@@ -524,6 +524,7 @@ p, li { white-space: pre-wrap; }
   </action>
  </widget>
  <resources>
+  <include location="../resources/bitflagrenderer.qrc"/>
   <include location="bitflagrenderer.qrc"/>
  </resources>
  <connections>

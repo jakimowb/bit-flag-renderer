@@ -26,13 +26,14 @@ import os
 import pathlib
 import re
 import shutil
-from typing import Iterator
+from typing import Iterator, Union
 from xml.dom import minidom
 
 import docutils.core
+import markdown
 
 import bitflagrenderer
-from bitflagrenderer import DIR_REPO, __version__, PATH_ABOUT, DIR_PKG
+from bitflagrenderer import DIR_REPO, __version__, PATH_ABOUT, DIR_RESOURCES, DIR_PKG
 from qps.make.deploy import QGISMetadataFileWriter
 from qps.utils import zipdir
 
@@ -118,12 +119,16 @@ def create_plugin():
     # copy python and other resource files
     pattern = re.compile(r'\.(py|svg|png|txt|ui|tif|qml|md|js|css|json)$')
     files = list(scantree(DIR_PKG, pattern=pattern))
-    files.extend(list(scantree(DIR_PKG / 'flagschemes', pattern=pattern)))
+    files.extend(list(scantree(DIR_RESOURCES / 'bitflagschemes', pattern=re.compile(r'.*\.xml$'))))
+    files.extend(list(scantree(DIR_RESOURCES / 'exampledata', pattern=pattern)))
+    files.extend(list(scantree(DIR_RESOURCES / 'icons', pattern=pattern)))
+    files.append(DIR_RESOURCES / 'bitflagrenderer.qrc')
+    files.append(DIR_RESOURCES / 'bitflagrenderer_rc.py')
     files.append(DIR_PKG / '__init__.py')
+    files.append(DIR_REPO / '__init__.py')
     files.append(DIR_REPO / 'ABOUT.md')
     files.append(DIR_REPO / 'CHANGELOG.md')
     files.append(DIR_REPO / 'LICENSE.md')
-    files.append(DIR_REPO / 'LICENSE.html')
     files.append(DIR_REPO / 'requirements.txt')
 
     for fileSrc in files:
@@ -166,6 +171,41 @@ def create_plugin():
     print('Finished')
 
 
+
+def markdownToHTML(path_md: Union[str, pathlib.Path]) -> str:
+    path_md = pathlib.Path(path_md)
+
+    html = None
+    if not path_md.is_file():
+        for s in ['.md', '.rst']:
+            p = path_md.parent / (os.path.splitext(path_md.name)[0] + s)
+            if p.is_file():
+                path_md = p
+                break
+
+    if path_md.name.endswith('.rst'):
+
+        assert path_md.is_file(), path_md
+        overrides = {'stylesheet': None,
+                     'embed_stylesheet': False,
+                     'output_encoding': 'utf-8',
+                     }
+
+        buffer = io.StringIO()
+        html = docutils.core.publish_file(
+            source_path=path_md,
+            writer_name='html5',
+            destination=buffer,
+            settings_overrides=overrides)
+    elif path_md.name.endswith('.md'):
+        with open(path_md, 'r', encoding='utf-8') as f:
+            md = f.read()
+        html = markdown.markdown(md)
+    else:
+        raise Exception(f'Unsupported file: {path_md}')
+    return html
+
+
 def createCHANGELOG(dirPlugin):
     """
     Reads the CHANGELOG.md and creates the deploy/CHANGELOG (without extension!) for the QGIS Plugin Manager
@@ -175,53 +215,14 @@ def createCHANGELOG(dirPlugin):
     pathMD = os.path.join(DIR_REPO, 'CHANGELOG.md')
     pathCL = os.path.join(dirPlugin, 'CHANGELOG')
 
-    os.makedirs(os.path.dirname(pathCL), exist_ok=True)
-    assert os.path.isfile(pathMD)
-
-    overrides = {'stylesheet': None,
-                 'embed_stylesheet': False,
-                 'output_encoding': 'utf-8',
-                 }
-
-    html = docutils.core.publish_file(source_path=pathMD, writer_name='html5', settings_overrides=overrides)
-
-    xml = minidom.parseString(html)
-    #  remove headline
-    for i, node in enumerate(xml.getElementsByTagName('h1')):
-        if i == 0:
-            node.parentNode.removeChild(node)
-        else:
-            node.tagName = 'h4'
-
-    for node in xml.getElementsByTagName('link'):
-        node.parentNode.removeChild(node)
-
-    for node in xml.getElementsByTagName('meta'):
-        if node.getAttribute('name') == 'generator':
-            node.parentNode.removeChild(node)
-
-    xml = xml.getElementsByTagName('body')[0]
-    html = xml.toxml()
-    html_cleaned = []
-    for line in html.split('\n'):
-        # line to modify
-        line = re.sub(r'class="[^"]*"', '', line)
-        line = re.sub(r'id="[^"]*"', '', line)
-        line = re.sub(r'<li><p>', '<li>', line)
-        line = re.sub(r'</p></li>', '</li>', line)
-        line = re.sub(r'</?(dd|dt|div|body)[ ]*>', '', line)
-        line = line.strip()
-        if line != '':
-            html_cleaned.append(line)
+    html = markdownToHTML(pathMD)
     # make html compact
+    # remove newlines as each line will be shown in a table row <tr>
+    # see qgspluginmanager.cpp
+    html = html.replace('\n', '')
 
     with open(pathCL, 'w', encoding='utf-8') as f:
-        f.write('\n'.join(html_cleaned))
-
-    if False:
-        with open(pathCL + '.html', 'w', encoding='utf-8') as f:
-            f.write('\n'.join(html_cleaned))
-    s = ""
+        f.write(html)
 
 
 if __name__ == "__main__":
