@@ -31,15 +31,16 @@ LICENSE = 'GNU GPL-3'
 DESCRIPTION = 'Visualization of quality image bit flags.'
 URL_HOMEPAGE = 'https://bit-flag-renderer.readthedocs.io/en/latest/'
 URL_DOCUMENTATION = 'https://bit-flag-renderer.readthedocs.io/en/latest/'
-URL_REPOSITORY = 'https://bitbucket.org/jakimowb/bit-flag-renderer'
+URL_REPOSITORY = 'https://github.com/jakimowb/bit-flag-renderer'
 
-URL_ISSUE_TRACKER = 'https://bitbucket.org/jakimowb/bit-flag-renderer/issues'
-URL_CREATE_ISSUE = 'https://bitbucket.org/jakimowb/bit-flag-renderer/issues/new'
+URL_ISSUE_TRACKER = 'https://github.com/jakimowb/bit-flag-renderer/issues'
+URL_CREATE_ISSUE = 'https://github.com/jakimowb/bit-flag-renderer/issues/new'
 DEPENDENCIES = ['numpy', 'gdal']
 
 LOG_MESSAGE_TAG = TITLE
-DIR_REPO = pathlib.Path(__file__).parents[1]
-DIR_RESOURCES = pathlib.Path(__file__).parent / 'resources'
+DIR_PKG = pathlib.Path(__file__).parent
+DIR_REPO = DIR_PKG.parent
+DIR_RESOURCES = DIR_PKG / 'resources'
 DIR_EXAMPLE_DATA = DIR_RESOURCES / 'exampledata'
 DIR_BITFLAG_SCHEMES = DIR_RESOURCES / 'bitflagschemes'
 DIR_ICONS = DIR_RESOURCES / 'bitflagrenderer' / 'icons'
@@ -64,7 +65,7 @@ def classFactory(iface: QgisInterface):  # pylint: disable=invalid-name
     pluginDir = os.path.dirname(__file__)
     # if not pluginDir in sys.path:
     #    sys.path.append(pluginDir)
-    from bitflagrenderer.plugin import BitFlagRendererPlugin
+    from .plugin import BitFlagRendererPlugin
     return BitFlagRendererPlugin(iface)
 
 
