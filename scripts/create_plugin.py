@@ -107,8 +107,7 @@ def create_plugin(copy_to_profile: Union[bool, str] = False):
     PATH_METADATAFILE = PLUGIN_DIR / 'metadata.txt'
     MD.mVersion = BUILD_NAME
     MD.mAbout = markdownToHTML(PATH_ABOUT)
-    MD.writeMetadataTxt(DIR_PKG / 'metadata.txt')
-    MD.writeMetadataTxt(PATH_METADATAFILE)
+    MD.writeMetadataTxt(PLUGIN_DIR / 'metadata.txt')
 
     # 1. (re)-compile all enmapbox resource files
 
