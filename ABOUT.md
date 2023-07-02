@@ -8,7 +8,7 @@ with data type byte or integer.
 * predefined flag schemes, e.g. for [Landsat Quality Assessment (QA) bands](https://www.usgs.gov/landsat-missions/landsat-surface-reflectance-quality-assessment)
 * allows to specify, save and reload flag schemes
 * Documentation [https://bit-flag-renderer.readthedocs.io/en/latest](https://bit-flag-renderer.readthedocs.io/en/latest)
-* Repository [https://bitbucket.org/jakimowb/bit-flag-renderer](https://bitbucket.org/jakimowb/bit-flag-renderer)
+* Repository [https://github.com/jakimowb/bit-flag-renderer](https://github.com/jakimowb/bit-flag-renderer)
 
 
 The Bit Flag Renderer is developed at Humboldt-Universität zu Berlin, [Earth Observation Lab](https://hu-berlin.de/eo-lab) 
